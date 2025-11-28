@@ -1,7 +1,7 @@
 class AppConfig {
   // API Configuration
-  static const String baseUrl = 'http://10.0.2.2:3000/api'; // For Android Emulator
-  // static const String baseUrl = 'http://localhost:3000/api'; // For iOS Simulator
+  static const String baseUrl = 'http://localhost:3000/api'; // For Chrome/Web
+  // static const String baseUrl = 'http://10.0.2.2:3000/api'; // For Android Emulator
   // static const String baseUrl = 'http://YOUR_IP:3000/api'; // For Physical Device
   
   // App Information

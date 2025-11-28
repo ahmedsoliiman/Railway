@@ -18,10 +18,12 @@ app.use(helmet({
   contentSecurityPolicy: false,
 }));
 
-// CORS configuration
+// CORS configuration - Allow all origins for development
 app.use(cors({
-  origin: process.env.CLIENT_URL || '*',
+  origin: true, // Allow all origins in development
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
 // Body parser middleware
