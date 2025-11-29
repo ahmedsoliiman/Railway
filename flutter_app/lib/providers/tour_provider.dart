@@ -53,13 +53,34 @@ class TourProvider with ChangeNotifier {
     }
   }
 
-  // Load all tours
-  Future<void> loadTours() async {
+  // Load all tours with optional filters
+  Future<void> loadTours({
+    int? originStationId,
+    int? destinationStationId,
+    DateTime? date,
+    String? seatClass,
+  }) async {
     _setLoading(true);
     _setError(null);
 
     try {
-      _tours = await _apiService.getTours();
+      _tours = await _apiService.getTours(
+        originId: originStationId,
+        destinationId: destinationStationId,
+        date: date?.toIso8601String().split('T')[0],
+      );
+      
+      // Filter by seat class if specified (frontend filtering)
+      if (seatClass != null) {
+        _tours = _tours.where((tour) {
+          if (seatClass.toLowerCase() == 'first') {
+            return tour.firstClassPrice != null && tour.firstClassPrice! > 0;
+          } else if (seatClass.toLowerCase() == 'second') {
+            return tour.secondClassPrice != null && tour.secondClassPrice! > 0;
+          }
+          return true;
+        }).toList();
+      }
     } catch (e) {
       _setError('Failed to load tours: $e');
     } finally {

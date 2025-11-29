@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'config/theme.dart';
 import 'providers/auth_provider.dart';
 import 'providers/tour_provider.dart';
+import 'providers/admin_provider.dart';
 import 'screens/splash_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/signup_screen.dart';
@@ -14,6 +15,7 @@ import 'screens/tours/tour_detail_screen.dart';
 import 'screens/booking/booking_screen.dart';
 import 'screens/booking/my_bookings_screen.dart';
 import 'screens/profile/profile_screen.dart';
+import 'screens/admin/admin_dashboard_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -28,6 +30,7 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => TourProvider()),
+        ChangeNotifierProvider(create: (_) => AdminProvider()),
       ],
       child: MaterialApp(
         title: 'Train Booking System',
@@ -45,6 +48,7 @@ class MyApp extends StatelessWidget {
           '/booking': (context) => const BookingScreen(),
           '/my-bookings': (context) => const MyBookingsScreen(),
           '/profile': (context) => const ProfileScreen(),
+          '/admin': (context) => const AdminDashboardScreen(),
         },
       ),
     );

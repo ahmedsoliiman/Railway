@@ -36,7 +36,13 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
 
     if (response['success']) {
-      Navigator.pushReplacementNamed(context, '/home');
+      // Route based on user role
+      final userRole = response['userRole'] ?? 'user';
+      if (userRole == 'admin') {
+        Navigator.pushReplacementNamed(context, '/admin');
+      } else {
+        Navigator.pushReplacementNamed(context, '/home');
+      }
     } else {
       if (response['needsVerification'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(

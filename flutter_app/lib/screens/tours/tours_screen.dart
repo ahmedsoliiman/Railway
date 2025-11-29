@@ -12,6 +12,11 @@ class ToursScreen extends StatefulWidget {
 }
 
 class _ToursScreenState extends State<ToursScreen> {
+  int? _selectedOriginId;
+  int? _selectedDestinationId;
+  DateTime? _selectedDate;
+  String? _selectedClass;
+
   @override
   void initState() {
     super.initState();
@@ -20,7 +25,101 @@ class _ToursScreenState extends State<ToursScreen> {
 
   Future<void> _loadTours() async {
     final tourProvider = Provider.of<TourProvider>(context, listen: false);
-    await tourProvider.loadTours();
+    await tourProvider.loadTours(
+      originStationId: _selectedOriginId,
+      destinationStationId: _selectedDestinationId,
+      date: _selectedDate,
+      seatClass: _selectedClass,
+    );
+  }
+
+  void _showFilterDialog() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+            top: 16,
+            left: 16,
+            right: 16,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Filters', style: Theme.of(context).textTheme.titleLarge),
+                  TextButton(
+                    onPressed: () {
+                      this.setState(() {
+                        _selectedOriginId = null;
+                        _selectedDestinationId = null;
+                        _selectedDate = null;
+                        _selectedClass = null;
+                      });
+                      Navigator.pop(context);
+                      _loadTours();
+                    },
+                    child: const Text('Clear All'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: _selectedClass,
+                decoration: const InputDecoration(
+                  labelText: 'Seat Class',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'first', child: Text('First Class')),
+                  DropdownMenuItem(value: 'second', child: Text('Second Class')),
+                ],
+                onChanged: (value) => this.setState(() => _selectedClass = value),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                title: Text(_selectedDate == null 
+                    ? 'Select Date' 
+                    : DateFormat('MMM dd, yyyy').format(_selectedDate!)),
+                trailing: const Icon(Icons.calendar_today),
+                onTap: () async {
+                  final date = await showDatePicker(
+                    context: context,
+                    initialDate: _selectedDate ?? DateTime.now(),
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime.now().add(const Duration(days: 365)),
+                  );
+                  if (date != null) {
+                    this.setState(() => _selectedDate = date);
+                  }
+                },
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  side: BorderSide(color: Colors.grey.shade300),
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _loadTours();
+                  },
+                  child: const Text('Apply Filters'),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -28,6 +127,13 @@ class _ToursScreenState extends State<ToursScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Available Tours'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.filter_list),
+            onPressed: _showFilterDialog,
+            tooltip: 'Filter Tours',
+          ),
+        ],
       ),
       body: Consumer<TourProvider>(
         builder: (context, tourProvider, child) {

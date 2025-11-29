@@ -28,7 +28,13 @@ class _SplashScreenState extends State<SplashScreen> {
     if (isLoggedIn) {
       await authProvider.loadUser();
       if (mounted) {
-        Navigator.pushReplacementNamed(context, '/home');
+        // Check user role and route accordingly
+        final user = authProvider.user;
+        if (user?.role == 'admin') {
+          Navigator.pushReplacementNamed(context, '/admin');
+        } else {
+          Navigator.pushReplacementNamed(context, '/home');
+        }
       }
     } else {
       if (mounted) {

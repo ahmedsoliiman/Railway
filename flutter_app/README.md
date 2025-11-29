@@ -1,17 +1,29 @@
 # Train Booking Mobile App
 
-A professional Flutter mobile application for train ticket booking.
+A professional Flutter mobile application for train ticket booking with multi-class seat support.
 
 ## Features
 
-- User Registration with Email Verification
-- Login/Logout
-- Browse Available Tours
-- Search and Filter Tours
-- Book Train Tickets
-- View Booking History
-- Manage User Profile
-- Real-time Seat Availability
+### User Features
+- ✅ User Registration with Email Verification
+- ✅ Login/Logout with Role-Based Routing
+- ✅ Browse Available Tours
+- ✅ Advanced Search and Filter Tours (Date, Seat Class)
+- ✅ Multi-Class Booking (First Class & Second Class with different pricing)
+- ✅ View Booking History (Upcoming/Past tabs)
+- ✅ Cancel Bookings
+- ✅ Manage User Profile
+- ✅ Real-time Seat Availability
+
+### Admin Features
+- ✅ Admin Dashboard with Real-Time Statistics
+- ✅ Stations Management (Full CRUD)
+- ✅ Trains Management (Full CRUD with class configuration)
+- ✅ Tours Management (Full CRUD with dual pricing)
+- ✅ Reservations Overview (View all bookings)
+- ✅ Train Types: Express, Premium, Standard
+- ✅ Train Status: Active, Maintenance, Retired
+- ✅ Tour Status: Scheduled, Boarding, Departed, Arrived, Cancelled
 
 ## Setup
 

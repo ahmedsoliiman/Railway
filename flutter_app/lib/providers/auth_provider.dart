@@ -69,6 +69,9 @@ class AuthProvider with ChangeNotifier {
       _user = User.fromJson(response['data']['user']);
       await _storageService.saveUser(_user!);
       notifyListeners();
+      
+      // Return user role for routing
+      response['userRole'] = _user!.role;
     } else {
       _setError(response['message']);
     }
