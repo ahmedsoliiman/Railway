@@ -309,6 +309,8 @@ router.post(
             email: user.email,
             phone: user.phone,
             role: user.role,
+            is_verified: user.is_verified,
+            created_at: user.created_at,
           },
         },
       });
