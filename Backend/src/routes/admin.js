@@ -41,14 +41,18 @@ router.post(
     body('name').trim().notEmpty().withMessage('Station name is required'),
     body('city').trim().notEmpty().withMessage('City is required'),
     body('address').optional().trim(),
-    body('latitude').optional().isFloat(),
-    body('longitude').optional().isFloat(),
+    body('latitude').optional({ values: 'falsy' }).isFloat(),
+    body('longitude').optional({ values: 'falsy' }).isFloat(),
     body('facilities').optional().trim(),
   ],
   validate,
   async (req, res) => {
     try {
-      const { name, city, address, latitude, longitude, facilities } = req.body;
+      let { name, city, address, latitude, longitude, facilities } = req.body;
+      
+      // Convert empty strings to null for coordinates
+      latitude = latitude === '' ? null : latitude;
+      longitude = longitude === '' ? null : longitude;
 
       const result = await db.query(
         `INSERT INTO stations (name, city, address, latitude, longitude, facilities) 
@@ -389,10 +393,24 @@ router.post(
         ]
       );
 
+      // Fetch the complete tour with joined data
+      const tourWithDetails = await db.query(
+        `SELECT t.*, 
+                tr.name as train_name, tr.train_number, tr.type as train_type, tr.facilities as train_facilities,
+                os.name as origin_name, os.city as origin_city,
+                ds.name as destination_name, ds.city as destination_city
+         FROM tours t
+         JOIN trains tr ON t.train_id = tr.id
+         JOIN stations os ON t.origin_station_id = os.id
+         JOIN stations ds ON t.destination_station_id = ds.id
+         WHERE t.id = $1`,
+        [result.rows[0].id]
+      );
+
       res.status(201).json({
         success: true,
         message: 'Tour created successfully',
-        data: { tour: result.rows[0] },
+        data: { tour: tourWithDetails.rows[0] },
       });
     } catch (error) {
       console.error('Create tour error:', error);
@@ -456,10 +474,24 @@ router.put('/tours/:id', async (req, res) => {
       });
     }
 
+    // Fetch the complete tour with joined data
+    const tourWithDetails = await db.query(
+      `SELECT t.*, 
+              tr.name as train_name, tr.train_number, tr.type as train_type, tr.facilities as train_facilities,
+              os.name as origin_name, os.city as origin_city,
+              ds.name as destination_name, ds.city as destination_city
+       FROM tours t
+       JOIN trains tr ON t.train_id = tr.id
+       JOIN stations os ON t.origin_station_id = os.id
+       JOIN stations ds ON t.destination_station_id = ds.id
+       WHERE t.id = $1`,
+      [id]
+    );
+
     res.json({
       success: true,
       message: 'Tour updated successfully',
-      data: { tour: result.rows[0] },
+      data: { tour: tourWithDetails.rows[0] },
     });
   } catch (error) {
     console.error('Update tour error:', error);
@@ -499,6 +531,30 @@ router.delete('/tours/:id', async (req, res) => {
   }
 });
 
+// @route   GET /api/admin/users
+// @desc    Get all users
+// @access  Admin
+router.get('/users', async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT id, full_name, email, phone, role, is_verified, created_at 
+       FROM users 
+       ORDER BY created_at DESC`
+    );
+
+    res.json({
+      success: true,
+      data: { users: result.rows },
+    });
+  } catch (error) {
+    console.error('Get users error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+    });
+  }
+});
+
 // @route   GET /api/admin/reservations
 // @desc    Get all reservations
 // @access  Admin
@@ -509,7 +565,8 @@ router.get('/reservations', async (req, res) => {
               u.full_name as user_name, u.email as user_email,
               t.departure_time, t.arrival_time,
               tr.name as train_name, tr.train_number,
-              os.name as origin_name, ds.name as destination_name
+              os.name as origin_name, os.city as origin_city,
+              ds.name as destination_name, ds.city as destination_city
        FROM reservations r
        JOIN users u ON r.user_id = u.id
        JOIN tours t ON r.tour_id = t.id
