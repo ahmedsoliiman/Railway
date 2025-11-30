@@ -119,7 +119,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> with SingleTickerPr
         itemCount: reservations.length,
         itemBuilder: (context, index) {
           final reservation = reservations[index];
-          final departureTime = DateTime.parse(reservation.tour.departureTime.toString());
+          final departureTime = reservation.departureTime ?? DateTime.now();
           
           return Card(
             margin: const EdgeInsets.only(bottom: 16),
@@ -140,7 +140,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> with SingleTickerPr
                   ),
                   const Divider(height: 16),
                   Text(
-                    reservation.tour.trainName,
+                    reservation.trainName ?? 'Unknown Train',
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const SizedBox(height: 8),
@@ -148,14 +148,14 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> with SingleTickerPr
                     children: [
                       Expanded(
                         child: Text(
-                          reservation.tour.originName,
+                          reservation.originName ?? 'Unknown',
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                       ),
                       const Icon(Icons.arrow_forward, size: 20),
                       Expanded(
                         child: Text(
-                          reservation.tour.destinationName,
+                          reservation.destinationName ?? 'Unknown',
                           textAlign: TextAlign.end,
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
@@ -172,11 +172,11 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> with SingleTickerPr
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        '${reservation.seatClass} Class • ${reservation.numberOfSeats} seat(s)',
+                        '${reservation.seatClassFormatted} • ${reservation.numberOfSeats} seat(s)',
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                       Text(
-                        '\$${double.parse(reservation.totalPrice.toString()).toStringAsFixed(2)}',
+                        '\$${reservation.totalPrice.toStringAsFixed(2)}',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           color: AppTheme.primaryColor,
                         ),
