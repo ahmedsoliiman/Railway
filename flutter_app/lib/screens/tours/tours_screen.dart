@@ -16,6 +16,7 @@ class _ToursScreenState extends State<ToursScreen> {
   int? _selectedDestinationId;
   DateTime? _selectedDate;
   String? _selectedClass;
+  String? _selectedTrainType;
 
   @override
   void initState() {
@@ -30,6 +31,7 @@ class _ToursScreenState extends State<ToursScreen> {
       destinationStationId: _selectedDestinationId,
       date: _selectedDate,
       seatClass: _selectedClass,
+      trainType: _selectedTrainType,
     );
   }
 
@@ -60,6 +62,7 @@ class _ToursScreenState extends State<ToursScreen> {
                         _selectedDestinationId = null;
                         _selectedDate = null;
                         _selectedClass = null;
+                        _selectedTrainType = null;
                       });
                       Navigator.pop(context);
                       _loadTours();
@@ -70,10 +73,26 @@ class _ToursScreenState extends State<ToursScreen> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
+                value: _selectedTrainType,
+                decoration: const InputDecoration(
+                  labelText: 'Train Type',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.train),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'Express', child: Text('Express')),
+                  DropdownMenuItem(value: 'Premium', child: Text('Premium')),
+                  DropdownMenuItem(value: 'Standard', child: Text('Standard')),
+                ],
+                onChanged: (value) => this.setState(() => _selectedTrainType = value),
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
                 value: _selectedClass,
                 decoration: const InputDecoration(
                   labelText: 'Seat Class',
                   border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.airline_seat_recline_normal),
                 ),
                 items: const [
                   DropdownMenuItem(value: 'first', child: Text('First Class')),
@@ -215,9 +234,37 @@ class _ToursScreenState extends State<ToursScreen> {
                                       tour.trainName,
                                       style: Theme.of(context).textTheme.titleLarge,
                                     ),
-                                    Text(
-                                      tour.trainNumber,
-                                      style: Theme.of(context).textTheme.bodySmall,
+                                    Row(
+                                      children: [
+                                        Text(
+                                          tour.trainNumber,
+                                          style: Theme.of(context).textTheme.bodySmall,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: tour.trainType == 'Premium' 
+                                                ? Colors.amber.shade100
+                                                : tour.trainType == 'Express'
+                                                    ? Colors.blue.shade100
+                                                    : Colors.grey.shade200,
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: Text(
+                                            tour.trainType,
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                              color: tour.trainType == 'Premium'
+                                                  ? Colors.amber.shade900
+                                                  : tour.trainType == 'Express'
+                                                      ? Colors.blue.shade900
+                                                      : Colors.grey.shade700,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),

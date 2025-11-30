@@ -320,6 +320,18 @@ class AdminProvider with ChangeNotifier {
     return response;
   }
 
+  // ============ USERS ============
+
+  Future<List<dynamic>> getAllUsers() async {
+    final response = await _adminService.getAllUsers();
+
+    if (response['success']) {
+      return response['data'] as List<dynamic>;
+    } else {
+      throw Exception(response['message']);
+    }
+  }
+
   // ============ RESERVATIONS ============
 
   Future<List<dynamic>> getAllReservations() async {

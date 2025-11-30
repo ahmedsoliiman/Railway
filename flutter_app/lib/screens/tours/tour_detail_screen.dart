@@ -63,12 +63,33 @@ class _TourDetailScreenState extends State<TourDetailScreen> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Text(
-                        '${tour.trainNumber} • ${tour.trainType}',
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 16,
-                        ),
+                      Row(
+                        children: [
+                          Text(
+                            tour.trainNumber,
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.white.withOpacity(0.3)),
+                            ),
+                            child: Text(
+                              tour.trainType,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),

@@ -15,6 +15,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final _originController = TextEditingController();
   final _destinationController = TextEditingController();
   DateTime? _selectedDate;
+  String? _selectedTrainType;
 
   @override
   void initState() {
@@ -41,12 +42,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _searchTours() async {
     final tourProvider = Provider.of<TourProvider>(context, listen: false);
-    String? dateString;
-    if (_selectedDate != null) {
-      dateString = '${_selectedDate!.year}-${_selectedDate!.month.toString().padLeft(2, '0')}-${_selectedDate!.day.toString().padLeft(2, '0')}';
-    }
     
-    await tourProvider.searchTours(date: dateString);
+    await tourProvider.loadTours(
+      date: _selectedDate,
+      trainType: _selectedTrainType,
+    );
     
     if (mounted) {
       Navigator.pushNamed(context, '/tours');
@@ -165,6 +165,22 @@ class _HomeScreenState extends State<HomeScreen> {
                                   : '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}',
                             ),
                           ),
+                        ),
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<String>(
+                          value: _selectedTrainType,
+                          decoration: const InputDecoration(
+                            labelText: 'Train Type (Optional)',
+                            prefixIcon: Icon(Icons.train_outlined),
+                            helperText: 'Filter by train type',
+                          ),
+                          items: const [
+                            DropdownMenuItem(value: null, child: Text('All Types')),
+                            DropdownMenuItem(value: 'Premium', child: Text('Premium')),
+                            DropdownMenuItem(value: 'Express', child: Text('Express')),
+                            DropdownMenuItem(value: 'Standard', child: Text('Standard')),
+                          ],
+                          onChanged: (value) => setState(() => _selectedTrainType = value),
                         ),
                         const SizedBox(height: 24),
                         SizedBox(

@@ -36,7 +36,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     const AdminOverviewPage(),
     const AdminStationsPage(),
     const AdminTrainsPage(),
-    const AdminToursPage(),
+    const AdminTripsPage(),
     const AdminUsersPage(),
   ];
 
@@ -134,9 +134,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 label: Text('Trains'),
               ),
               NavigationRailDestination(
-                icon: Icon(Icons.tour_outlined),
-                selectedIcon: Icon(Icons.tour),
-                label: Text('Tours'),
+                icon: Icon(Icons.route_outlined),
+                selectedIcon: Icon(Icons.route),
+                label: Text('Trips'),
               ),
               NavigationRailDestination(
                 icon: Icon(Icons.people_outline),
@@ -555,11 +555,13 @@ class AdminTrainsPage extends StatelessWidget {
                 const SizedBox(height: 16),
                 EnhancedDropdown<String>(
                   value: selectedType,
-                  label: 'Train Type',
+                  label: 'Train Type *',
                   icon: Icons.category,
-                  items: ['Express', 'Premium', 'Standard'].map((type) {
-                    return DropdownMenuItem(value: type, child: Text(type));
-                  }).toList(),
+                  items: [
+                    const DropdownMenuItem(value: 'Premium', child: Text('Premium (Luxury)')),
+                    const DropdownMenuItem(value: 'Express', child: Text('Express (Fast)')),
+                    const DropdownMenuItem(value: 'Standard', child: Text('Standard (Economic)')),
+                  ],
                   onChanged: (value) => setState(() => selectedType = value!),
                 ),
                 const SizedBox(height: 16),
@@ -797,11 +799,11 @@ class AdminTrainsPage extends StatelessWidget {
   }
 }
 
-// Tours Management Page
-class AdminToursPage extends StatelessWidget {
-  const AdminToursPage({super.key});
+// Trips Management Page
+class AdminTripsPage extends StatelessWidget {
+  const AdminTripsPage({super.key});
 
-  void _showTourDialog(BuildContext context, AdminProvider adminProvider, {Tour? tour}) {
+  void _showTripDialog(BuildContext context, AdminProvider adminProvider, {Tour? tour}) {
     final firstClassPriceController = TextEditingController(text: tour?.firstClassPrice?.toString());
     final secondClassPriceController = TextEditingController(text: tour?.secondClassPrice?.toString());
     final availableSeatsController = TextEditingController(text: tour?.availableSeats.toString());
@@ -817,7 +819,7 @@ class AdminToursPage extends StatelessWidget {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: Text(tour == null ? 'Add Tour' : 'Edit Tour'),
+          title: Text(tour == null ? 'Add Trip' : 'Edit Trip'),
           content: Form(
             key: formKey,
             child: SingleChildScrollView(
@@ -1000,15 +1002,15 @@ class AdminToursPage extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Manage Tours',
+                    'Manage Trips',
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                   ),
                   ElevatedButton.icon(
-                    onPressed: () => _showTourDialog(context, adminProvider),
+                    onPressed: () => _showTripDialog(context, adminProvider),
                     icon: const Icon(Icons.add),
-                    label: const Text('Add Tour'),
+                    label: const Text('Add Trip'),
                   ),
                 ],
               ),
@@ -1017,7 +1019,7 @@ class AdminToursPage extends StatelessWidget {
                 child: adminProvider.isLoadingTours
                     ? const Center(child: CircularProgressIndicator())
                     : adminProvider.tours.isEmpty
-                        ? const Center(child: Text('No tours yet'))
+                        ? const Center(child: Text('No trips yet'))
                         : Card(
                             child: SingleChildScrollView(
                               scrollDirection: Axis.horizontal,
@@ -1046,7 +1048,7 @@ class AdminToursPage extends StatelessWidget {
                                       children: [
                                         IconButton(
                                           icon: const Icon(Icons.edit, size: 20),
-                                          onPressed: () => _showTourDialog(context, adminProvider, tour: tour),
+                                          onPressed: () => _showTripDialog(context, adminProvider, tour: tour),
                                         ),
                                         IconButton(
                                           icon: const Icon(Icons.delete, size: 20, color: Colors.red),
@@ -1054,8 +1056,8 @@ class AdminToursPage extends StatelessWidget {
                                             final confirm = await showDialog<bool>(
                                               context: context,
                                               builder: (context) => AlertDialog(
-                                                title: const Text('Delete Tour'),
-                                                content: Text('Delete tour from ${tour.originCity} to ${tour.destinationCity}?'),
+                                                title: const Text('Delete Trip'),
+                                                content: Text('Delete trip from ${tour.originCity} to ${tour.destinationCity}?'),
                                                 actions: [
                                                   TextButton(
                                                     onPressed: () => Navigator.pop(context, false),
@@ -1105,22 +1107,26 @@ class AdminUsersPage extends StatefulWidget {
 }
 
 class _AdminUsersPageState extends State<AdminUsersPage> {
+  List<dynamic> users = [];
   List<dynamic> reservations = [];
   bool isLoading = false;
+  int _selectedTab = 0;
 
   @override
   void initState() {
     super.initState();
-    _loadReservations();
+    _loadData();
   }
 
-  Future<void> _loadReservations() async {
+  Future<void> _loadData() async {
     setState(() => isLoading = true);
     try {
       final adminProvider = Provider.of<AdminProvider>(context, listen: false);
-      final data = await adminProvider.getAllReservations();
+      final usersData = await adminProvider.getAllUsers();
+      final reservationsData = await adminProvider.getAllReservations();
       setState(() {
-        reservations = data;
+        users = usersData;
+        reservations = reservationsData;
         isLoading = false;
       });
     } catch (e) {
@@ -1164,26 +1170,107 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
               ),
               IconButton(
                 icon: const Icon(Icons.refresh),
-                onPressed: _loadReservations,
+                onPressed: _loadData,
                 tooltip: 'Refresh',
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
+          // Tabs
+          Row(
+            children: [
+              ChoiceChip(
+                label: Text('Users (${users.length})'),
+                selected: _selectedTab == 0,
+                onSelected: (selected) => setState(() => _selectedTab = 0),
+              ),
+              const SizedBox(width: 12),
+              ChoiceChip(
+                label: Text('Reservations (${reservations.length})'),
+                selected: _selectedTab == 1,
+                onSelected: (selected) => setState(() => _selectedTab = 1),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
           Expanded(
             child: isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : reservations.isEmpty
-                    ? const Center(child: Text('No reservations yet'))
-                    : Card(
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: DataTable(
+                : _selectedTab == 0
+                    ? _buildUsersTable()
+                    : _buildReservationsTable(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUsersTable() {
+    if (users.isEmpty) {
+      return const Center(child: Text('No users yet'));
+    }
+    
+    return Card(
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          columns: const [
+            DataColumn(label: Text('ID')),
+            DataColumn(label: Text('Name')),
+            DataColumn(label: Text('Email')),
+            DataColumn(label: Text('Phone')),
+            DataColumn(label: Text('Role')),
+            DataColumn(label: Text('Verified')),
+            DataColumn(label: Text('Joined')),
+          ],
+          rows: users.map<DataRow>((user) {
+            return DataRow(cells: [
+              DataCell(Text('#${user['id']}')),
+              DataCell(Text(user['full_name'] ?? 'N/A')),
+              DataCell(Text(user['email'] ?? 'N/A')),
+              DataCell(Text(user['phone'] ?? 'N/A')),
+              DataCell(
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: user['role'] == 'admin' ? Colors.red[100] : Colors.blue[100],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    (user['role'] ?? 'user').toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: user['role'] == 'admin' ? Colors.red[900] : Colors.blue[900],
+                    ),
+                  ),
+                ),
+              ),
+              DataCell(Text(user['is_verified'] == true ? '✅' : '❌')),
+              DataCell(Text(user['created_at'] != null 
+                  ? DateFormat('MMM dd, yyyy').format(DateTime.parse(user['created_at']))
+                  : 'N/A')),
+            ]);
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReservationsTable() {
+    if (reservations.isEmpty) {
+      return const Center(child: Text('No reservations yet'));
+    }
+    
+    return Card(
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
                             columns: const [
                               DataColumn(label: Text('ID')),
                               DataColumn(label: Text('User')),
                               DataColumn(label: Text('Email')),
-                              DataColumn(label: Text('Tour')),
+                              DataColumn(label: Text('Train')),
                               DataColumn(label: Text('Route')),
                               DataColumn(label: Text('Date')),
                               DataColumn(label: Text('Class')),
@@ -1212,18 +1299,14 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                                 DataCell(Text('${reservation['number_of_seats']}')),
                                 DataCell(Text('\$${double.tryParse(reservation['total_price']?.toString() ?? '0')?.toStringAsFixed(2)}')),
                                 DataCell(Text(
-                                  '${_getStatusColor(reservation['booking_status'] ?? '')} ${(reservation['booking_status'] ?? '').toUpperCase()}',
+                                  '${_getStatusColor(reservation['status'] ?? '')} ${(reservation['status'] ?? '').toUpperCase()}',
                                 )),
                                 DataCell(Text(reservation['created_at'] != null 
                                     ? DateFormat('MMM dd').format(DateTime.parse(reservation['created_at']))
                                     : 'N/A')),
                               ]);
                             }).toList(),
-                          ),
-                        ),
-                      ),
-          ),
-        ],
+        ),
       ),
     );
   }

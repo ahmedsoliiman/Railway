@@ -433,11 +433,21 @@ class AdminService {
       final data = json.decode(response.body);
       
       if (response.statusCode == 201 && data['success']) {
-        return {
-          'success': true,
-          'message': data['message'],
-          'data': Tour.fromJson(data['data']['tour']),
-        };
+        try {
+          final tour = Tour.fromJson(data['data']['tour']);
+          return {
+            'success': true,
+            'message': data['message'],
+            'data': tour,
+          };
+        } catch (parseError) {
+          print('Tour parsing error: $parseError');
+          print('Tour data: ${data['data']['tour']}');
+          return {
+            'success': false,
+            'message': 'Failed to parse tour data: ${parseError.toString()}',
+          };
+        }
       } else {
         return {
           'success': false,
@@ -445,6 +455,7 @@ class AdminService {
         };
       }
     } catch (e) {
+      print('Create tour error: $e');
       return {
         'success': false,
         'message': 'Network error: ${e.toString()}',
@@ -485,11 +496,21 @@ class AdminService {
       final data = json.decode(response.body);
       
       if (response.statusCode == 200 && data['success']) {
-        return {
-          'success': true,
-          'message': data['message'],
-          'data': Tour.fromJson(data['data']['tour']),
-        };
+        try {
+          final tour = Tour.fromJson(data['data']['tour']);
+          return {
+            'success': true,
+            'message': data['message'],
+            'data': tour,
+          };
+        } catch (parseError) {
+          print('Tour parsing error: $parseError');
+          print('Tour data: ${data['data']['tour']}');
+          return {
+            'success': false,
+            'message': 'Failed to parse tour data: ${parseError.toString()}',
+          };
+        }
       } else {
         return {
           'success': false,
@@ -497,6 +518,7 @@ class AdminService {
         };
       }
     } catch (e) {
+      print('Update tour error: $e');
       return {
         'success': false,
         'message': 'Network error: ${e.toString()}',
@@ -523,6 +545,37 @@ class AdminService {
         return {
           'success': false,
           'message': data['message'] ?? 'Failed to delete tour',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Network error: ${e.toString()}',
+      };
+    }
+  }
+
+  // ============ USERS ============
+  
+  Future<Map<String, dynamic>> getAllUsers() async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse('${AppConfig.baseUrl}/admin/users'),
+        headers: headers,
+      );
+
+      final data = json.decode(response.body);
+      
+      if (response.statusCode == 200 && data['success']) {
+        return {
+          'success': true,
+          'data': data['data']['users'],
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Failed to fetch users',
         };
       }
     } catch (e) {

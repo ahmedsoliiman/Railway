@@ -59,6 +59,7 @@ class TourProvider with ChangeNotifier {
     int? destinationStationId,
     DateTime? date,
     String? seatClass,
+    String? trainType,
   }) async {
     _setLoading(true);
     _setError(null);
@@ -68,6 +69,7 @@ class TourProvider with ChangeNotifier {
         originId: originStationId,
         destinationId: destinationStationId,
         date: date?.toIso8601String().split('T')[0],
+        trainType: trainType,
       );
       
       // Filter by seat class if specified (frontend filtering)

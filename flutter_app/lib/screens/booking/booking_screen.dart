@@ -35,7 +35,7 @@ class _BookingScreenState extends State<BookingScreen> {
 
     final response = await tourProvider.createReservation(
       tourId: tour.id,
-      seatClass: _selectedClass,
+      seatClass: _selectedClass.toLowerCase(), // Convert to lowercase for backend
       numberOfSeats: _numberOfSeats,
     );
 
@@ -44,6 +44,9 @@ class _BookingScreenState extends State<BookingScreen> {
     if (!mounted) return;
 
     if (response['success'] == true) {
+      final bookingRef = response['data']['reservation']['booking_reference'] ?? 
+                        response['data']['booking_reference'] ?? 
+                        'N/A';
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -53,7 +56,7 @@ class _BookingScreenState extends State<BookingScreen> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Reference: ${response['data']['booking_reference']}'),
+              Text('Reference: $bookingRef'),
               const SizedBox(height: 8),
               const Text('Check your email for details.'),
             ],

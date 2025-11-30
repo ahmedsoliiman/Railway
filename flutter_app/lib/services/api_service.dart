@@ -120,6 +120,7 @@ class ApiService {
     int? originId,
     int? destinationId,
     String? date,
+    String? trainType,
   }) async {
     try {
       final headers = await _getHeaders();
@@ -129,6 +130,7 @@ class ApiService {
       if (originId != null) queryParams.add('origin=$originId');
       if (destinationId != null) queryParams.add('destination=$destinationId');
       if (date != null) queryParams.add('date=$date');
+      if (trainType != null) queryParams.add('train_type=$trainType');
       
       if (queryParams.isNotEmpty) {
         url += '?${queryParams.join('&')}';
