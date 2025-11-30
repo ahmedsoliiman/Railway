@@ -76,7 +76,7 @@ router.put(
 // @access  Private
 router.get('/tours', async (req, res) => {
   try {
-    const { origin, destination, date, seat_class } = req.query;
+    const { origin, destination, date, seat_class, train_type } = req.query;
 
     let query = `
       SELECT t.*, 
@@ -111,6 +111,12 @@ router.get('/tours', async (req, res) => {
       paramCount++;
       query += ` AND DATE(t.departure_time) = $${paramCount}`;
       params.push(date);
+    }
+
+    if (train_type) {
+      paramCount++;
+      query += ` AND LOWER(tr.type) = LOWER($${paramCount})`;
+      params.push(train_type);
     }
 
     query += ' ORDER BY t.departure_time ASC';
