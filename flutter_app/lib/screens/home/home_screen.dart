@@ -24,8 +24,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadData() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final tripProvider = Provider.of<TripProvider>(context, listen: false);
-    await tripProvider.searchTrips();
+    
+    // Load user data and trips in parallel
+    await Future.wait([
+      authProvider.fetchCurrentUser(),
+      tripProvider.searchTrips(),
+    ]);
   }
 
   Future<void> _selectDate(BuildContext context) async {

@@ -58,6 +58,8 @@ exports.signup = async (req, res) => {
       phone: null,
       role: 'user',
       is_verified: false,
+      verification_token: verificationToken,
+      verification_token_expires: verificationTokenExpires,
     });
 
     // Send verification email
@@ -202,6 +204,62 @@ exports.verifyEmail = async (req, res) => {
   }
 };
 
+// @desc    Verify email with code (POST method)
+// @route   POST /api/auth/verify-email
+// @access  Public
+exports.verifyEmailWithCode = async (req, res) => {
+  try {
+    const { email, code } = req.body;
+
+    if (!email || !code) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email and verification code are required',
+      });
+    }
+
+    const user = await User.findOne({
+      where: {
+        email: email,
+        verification_token: code,
+      },
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid verification code',
+      });
+    }
+
+    // Check if token expired
+    if (user.verification_token_expires < new Date()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Verification code has expired',
+      });
+    }
+
+    // Update user
+    await user.update({
+      is_verified: true,
+      verification_token: null,
+      verification_token_expires: null,
+    });
+
+    res.json({
+      success: true,
+      message: 'Email verified successfully',
+    });
+  } catch (error) {
+    console.error('Email verification error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error during verification',
+    });
+  }
+};
+
 // @desc    Resend verification code
 // @route   POST /api/auth/resend-code
 // @access  Public
@@ -234,6 +292,13 @@ exports.resendCode = async (req, res) => {
 
     // Generate new verification code
     const verificationToken = generateVerificationToken();
+    const verificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    // Update user with new token
+    await user.update({
+      verification_token: verificationToken,
+      verification_token_expires: verificationTokenExpires,
+    });
 
     // Send verification email
     try {

@@ -15,13 +15,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late TextEditingController _fullNameController;
   late TextEditingController _phoneController;
   bool _isEditing = false;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    final user = Provider.of<AuthProvider>(context, listen: false).user;
-    _fullNameController = TextEditingController(text: user?.fullName ?? '');
-    _phoneController = TextEditingController(text: user?.phone ?? '');
+    // Initialize controllers with empty values first
+    _fullNameController = TextEditingController();
+    _phoneController = TextEditingController();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    
+    // Fetch latest user data from server
+    await authProvider.fetchCurrentUser();
+    
+    final user = authProvider.user;
+    _fullNameController.text = user?.fullName ?? '';
+    _phoneController.text = user?.phone ?? '';
+    
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -96,7 +115,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
         ],
       ),
-      body: Consumer<AuthProvider>(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Consumer<AuthProvider>(
         builder: (context, authProvider, child) {
           final user = authProvider.user;
           if (user == null) {

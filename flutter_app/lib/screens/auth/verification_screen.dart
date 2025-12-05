@@ -34,6 +34,11 @@ class _VerificationScreenState extends State<VerificationScreen> {
     if (!mounted) return;
 
     if (response['success'] == true) {
+      // Fetch updated user data
+      await authProvider.fetchCurrentUser();
+      
+      if (!mounted) return;
+      
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Email verified successfully!'),

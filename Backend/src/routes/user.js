@@ -341,12 +341,12 @@ router.get('/reservations', async (req, res) => {
   try {
     const result = await db.query(
       `SELECT r.*, 
-              t.departure_time, t.arrival_time, t.status as tour_status,
+              t.departure_time, t.arrival_time, t.status as trip_status,
               tr.name as train_name, tr.train_number,
               os.name as origin_name, os.city as origin_city,
               ds.name as destination_name, ds.city as destination_city
        FROM reservations r
-       JOIN tours t ON r.tour_id = t.id
+       JOIN trips t ON r.trip_id = t.id
        JOIN trains tr ON t.train_id = tr.id
        JOIN stations os ON t.origin_station_id = os.id
        JOIN stations ds ON t.destination_station_id = ds.id

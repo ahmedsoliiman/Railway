@@ -13,6 +13,8 @@ CREATE TABLE users (
     phone VARCHAR(20),
     role VARCHAR(20) DEFAULT 'user' CHECK (role IN ('user', 'admin')),
     is_verified BOOLEAN DEFAULT false,
+    verification_token VARCHAR(10),
+    verification_token_expires TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

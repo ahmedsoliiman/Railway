@@ -23,9 +23,22 @@ router.post(
 );
 
 // @route   GET /api/auth/verify/:token
-// @desc    Verify email with token
+// @desc    Verify email with token (legacy)
 // @access  Public
 router.get('/verify/:token', authController.verifyEmail);
+
+// @route   POST /api/auth/verify-email
+// @desc    Verify email with code
+// @access  Public
+router.post(
+  '/verify-email',
+  [
+    body('email').isEmail().withMessage('Please provide a valid email'),
+    body('code').notEmpty().withMessage('Verification code is required'),
+  ],
+  validate,
+  authController.verifyEmailWithCode
+);
 
 // @route   POST /api/auth/resend-code
 // @desc    Resend verification code

@@ -105,7 +105,7 @@ class ApiService {
 
       final data = jsonDecode(response.body);
       if (data['success'] && data['data'] != null) {
-        return User.fromJson(data['data']['user']);
+        return User.fromJson(data['data']);
       }
       return null;
     } catch (e) {

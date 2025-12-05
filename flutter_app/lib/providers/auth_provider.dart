@@ -52,6 +52,9 @@ class AuthProvider with ChangeNotifier {
     _setLoading(true);
     _setError(null);
 
+    // Clear any stale data first
+    await _storageService.clearAll();
+
     final response = await _apiService.login(
       email: email,
       password: password,
@@ -92,7 +95,10 @@ class AuthProvider with ChangeNotifier {
 
     _setLoading(false);
 
-    if (!response['success']) {
+    if (response['success']) {
+      // After successful verification, fetch updated user data from server
+      await fetchCurrentUser();
+    } else {
       _setError(response['message']);
     }
 
@@ -158,6 +164,21 @@ class AuthProvider with ChangeNotifier {
     return response;
   }
 
+  // Fetch current user data
+  Future<void> fetchCurrentUser() async {
+    try {
+      final user = await _apiService.getCurrentUser();
+      
+      if (user != null) {
+        _user = user;
+        await _storageService.saveUser(_user!);
+        notifyListeners();
+      }
+    } catch (e) {
+      print('Error fetching current user: $e');
+    }
+  }
+
   // Logout
   Future<void> logout() async {
     await _storageService.clearAll();
@@ -169,6 +190,15 @@ class AuthProvider with ChangeNotifier {
   // Check if user is logged in
   Future<bool> checkAuthStatus() async {
     return await _storageService.isLoggedIn();
+  }
+
+  // Load user from storage
+  Future<void> loadUserFromStorage() async {
+    final user = await _storageService.getUser();
+    if (user != null) {
+      _user = user;
+      notifyListeners();
+    }
   }
 
   void _setLoading(bool value) {
