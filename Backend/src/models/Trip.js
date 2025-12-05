@@ -31,6 +31,10 @@ const Trip = sequelize.define('Trip', {
       key: 'id',
     },
   },
+  departure: {
+    type: DataTypes.DATEONLY,
+    allowNull: false,
+  },
   departure_time: {
     type: DataTypes.DATE,
     allowNull: false,
@@ -47,14 +51,10 @@ const Trip = sequelize.define('Trip', {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: true,
   },
-  available_seats: {
+  quantities: {
     type: DataTypes.INTEGER,
     allowNull: false,
     defaultValue: 0,
-  },
-  status: {
-    type: DataTypes.STRING(20),
-    defaultValue: 'scheduled',
   },
   created_at: {
     type: DataTypes.DATE,

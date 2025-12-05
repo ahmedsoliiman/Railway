@@ -94,12 +94,12 @@ CREATE TABLE trips (
     train_id INTEGER REFERENCES trains(id) ON DELETE CASCADE,
     origin_station_id INTEGER REFERENCES stations(id) ON DELETE CASCADE,
     destination_station_id INTEGER REFERENCES stations(id) ON DELETE CASCADE,
+    departure DATE NOT NULL,
     departure_time TIMESTAMP NOT NULL,
     arrival_time TIMESTAMP NOT NULL,
     first_class_price DECIMAL(10, 2),
     second_class_price DECIMAL(10, 2),
-    available_seats INTEGER NOT NULL DEFAULT 0,
-    status VARCHAR(20) DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'boarding', 'departed', 'arrived', 'cancelled')),
+    quantities INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

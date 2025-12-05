@@ -15,17 +15,11 @@
                 <p class="admin-label">Admin Panel</p>
             </div>
             <nav class="sidebar-nav">
-                <a href="#dashboard" class="nav-item active" data-section="dashboard">
-                    <span class="icon">📊</span> Dashboard
-                </a>
-                <a href="#stations" class="nav-item" data-section="stations">
+                <a href="#stations" class="nav-item active" data-section="stations">
                     <span class="icon">🏢</span> Stations
                 </a>
                 <a href="#trains" class="nav-item" data-section="trains">
                     <span class="icon">🚆</span> Trains
-                </a>
-                <a href="#trips" class="nav-item" data-section="trips">
-                    <span class="icon">🎫</span> Tours
                 </a>
                 <a href="#reservations" class="nav-item" data-section="reservations">
                     <span class="icon">📋</span> Reservations
@@ -42,63 +36,15 @@
         <main class="main-content">
             <!-- Header -->
             <header class="header">
-                <h1 id="section-title">Dashboard</h1>
+                <h1 id="section-title">Stations</h1>
                 <div class="user-info">
                     <span id="user-name">Admin User</span>
                     <span id="user-email"></span>
                 </div>
             </header>
 
-            <!-- Dashboard Section -->
-            <section id="dashboard-section" class="content-section active">
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-icon">👥</div>
-                        <div class="stat-info">
-                            <h3 id="stat-users">0</h3>
-                            <p>Total Users</p>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">🏢</div>
-                        <div class="stat-info">
-                            <h3 id="stat-stations">0</h3>
-                            <p>Stations</p>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">🚆</div>
-                        <div class="stat-info">
-                            <h3 id="stat-trains">0</h3>
-                            <p>Trains</p>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">🎫</div>
-                        <div class="stat-info">
-                            <h3 id="stat-trips">0</h3>
-                            <p>Active Trips</p>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">📋</div>
-                        <div class="stat-info">
-                            <h3 id="stat-reservations">0</h3>
-                            <p>Reservations</p>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">💰</div>
-                        <div class="stat-info">
-                            <h3 id="stat-revenue">$0</h3>
-                            <p>Total Revenue</p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
             <!-- Stations Section -->
-            <section id="stations-section" class="content-section">
+            <section id="stations-section" class="content-section active">
                 <div class="section-header">
                     <h2>Manage Stations</h2>
                     <button class="btn-primary" onclick="showAddStationModal()">+ Add Station</button>
@@ -135,31 +81,6 @@
                                 <th>Name</th>
                                 <th>Type</th>
                                 <th>Total Seats</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </section>
-
-            <!-- Trips Section -->
-            <section id="trips-section" class="content-section">
-                <div class="section-header">
-                    <h2>Manage Trips</h2>
-                    <button class="btn-primary" onclick="showAddTourModal()">+ Add Tour</button>
-                </div>
-                <div class="table-container">
-                    <table id="trips-table">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Train</th>
-                                <th>Route</th>
-                                <th>Departure</th>
-                                <th>Arrival</th>
-                                <th>Available Seats</th>
                                 <th>Status</th>
                                 <th>Actions</th>
                             </tr>
