@@ -11,9 +11,9 @@ const generateToken = (userId, role) => {
   });
 };
 
-// Generate verification token
+// Generate 6-digit verification code
 const generateVerificationToken = () => {
-  return crypto.randomBytes(32).toString('hex');
+  return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
 // @desc    Register new user
@@ -198,6 +198,63 @@ exports.verifyEmail = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Server error during verification',
+    });
+  }
+};
+
+// @desc    Resend verification code
+// @route   POST /api/auth/resend-code
+// @access  Public
+exports.resendCode = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required',
+      });
+    }
+
+    // Find user
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    if (user.is_verified) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email already verified',
+      });
+    }
+
+    // Generate new verification code
+    const verificationToken = generateVerificationToken();
+
+    // Send verification email
+    try {
+      await emailService.sendVerificationEmail(email, user.full_name, verificationToken);
+      
+      res.json({
+        success: true,
+        message: 'Verification code sent successfully',
+      });
+    } catch (emailError) {
+      console.error('Failed to send verification email:', emailError);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to send verification code',
+      });
+    }
+  } catch (error) {
+    console.error('Resend code error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
     });
   }
 };

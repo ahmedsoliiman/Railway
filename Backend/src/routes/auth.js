@@ -27,6 +27,18 @@ router.post(
 // @access  Public
 router.get('/verify/:token', authController.verifyEmail);
 
+// @route   POST /api/auth/resend-code
+// @desc    Resend verification code
+// @access  Public
+router.post(
+  '/resend-code',
+  [
+    body('email').isEmail().withMessage('Please provide a valid email'),
+  ],
+  validate,
+  authController.resendCode
+);
+
 // @route   POST /api/auth/login
 // @desc    Login user
 // @access  Public
