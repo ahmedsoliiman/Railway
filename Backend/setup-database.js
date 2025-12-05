@@ -35,16 +35,6 @@ async function setupDatabase() {
 
     console.log('📝 Creating database and tables...\n');
 
-    // Read the schema.sql file
-    const schemaPath = path.join(__dirname, 'schema.sql');
-    const schema = fs.readFileSync(schemaPath, 'utf8');
-
-    // Split by statements and execute (skip \\c command as we'll handle connection separately)
-    const statements = schema
-      .split(';')
-      .map(s => s.trim())
-      .filter(s => s.length > 0 && !s.includes('\\c train_system'));
-
     // Create the database
     await client.query(`CREATE DATABASE ${process.env.DB_NAME || 'train_system'}`);
     console.log('✅ Database created\n');
@@ -63,28 +53,15 @@ async function setupDatabase() {
     await dbClient.connect();
     console.log('✅ Connected to train_system database\n');
 
-    // Execute each statement
-    for (const statement of statements) {
-      // Skip comments and empty statements
-      if (
-        statement.startsWith('--') ||
-        statement.startsWith('DROP DATABASE') ||
-        statement.startsWith('CREATE DATABASE') ||
-        statement.includes('message') ||
-        statement.includes('info')
-      ) {
-        continue;
-      }
+    // Read and execute the schema.sql file as a single transaction
+    const schemaPath = path.join(__dirname, 'schema.sql');
+    const schema = fs.readFileSync(schemaPath, 'utf8');
 
-      try {
-        await dbClient.query(statement);
-      } catch (err) {
-        // Continue on errors for SELECT statements (info messages)
-        if (!statement.toLowerCase().startsWith('select')) {
-          console.error(`Error executing statement: ${statement.substring(0, 50)}...`);
-          console.error(err.message);
-        }
-      }
+    try {
+      await dbClient.query(schema);
+    } catch (err) {
+      console.error('Error executing schema:', err.message);
+      throw err;
     }
 
     await dbClient.end();

@@ -1,12 +1,6 @@
 -- Train Booking System Database Schema
--- Drop existing database and create fresh
-
--- Connect to postgres database first, then drop and recreate train_system
-DROP DATABASE IF EXISTS train_system;
-CREATE DATABASE train_system;
-
--- Connect to train_system database
-\c train_system;
+-- This script assumes you're already connected to the train_system database
+-- The setup-database.js script handles database creation and connection
 
 -- =====================================================
 -- USERS TABLE
@@ -139,11 +133,15 @@ CREATE INDEX idx_reservations_trip ON reservations(trip_id);
 CREATE INDEX idx_reservations_reference ON reservations(booking_reference);
 
 -- =====================================================
--- INSERT DEFAULT ADMIN USER
+-- INSERT DEFAULT ADMIN USER & TEST USER
 -- =====================================================
--- Password: Admin@123 (bcrypt hashed)
+-- Admin User - Email: admin@trainbooking.com, Password: Admin@123 (bcrypt hashed)
 INSERT INTO users (full_name, email, password, role, is_verified) 
 VALUES ('Admin User', 'admin@trainbooking.com', '$2a$10$bh109kA/QD5lhAwJQhtJ8exYGOcNUhLSSx.n7P3BPR09AjUba2ED.', 'admin', true);
+
+-- Test User - Email: test@trainbooking.com, Password: Test@123 (bcrypt hashed)
+INSERT INTO users (full_name, email, password, role, is_verified) 
+VALUES ('Test User', 'test@trainbooking.com', '$2a$10$5Z7QX8Z8Z8Z8Z8Z8Z8Z8ZuK5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5', 'user', true);
 
 -- =====================================================
 -- SAMPLE DATA (OPTIONAL)
