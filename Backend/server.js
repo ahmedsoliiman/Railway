@@ -10,6 +10,8 @@ require('dotenv').config();
 const authRoutes = require('./src/routes/auth');
 const adminRoutes = require('./src/routes/admin');
 const userRoutes = require('./src/routes/user');
+const bookingRoutes = require('./src/routes/booking');
+const tripsRoutes = require('./src/routes/trips');
 
 const app = express();
 
@@ -42,6 +44,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/trips', tripsRoutes);
+app.use('/api/user', bookingRoutes);
 app.use('/api', userRoutes);
 
 // Root route
@@ -53,8 +57,8 @@ app.get('/', (req, res) => {
     endpoints: {
       auth: '/api/auth',
       admin: '/api/admin',
-      tours: '/api/tours',
-      reservations: '/api/reservations',
+      trips: '/api/trips',
+      reservations: '/api/user/reservations',
       profile: '/api/profile',
       adminDashboard: '/admin',
     },
@@ -88,7 +92,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 app.listen(PORT, () => {
   console.log(`
@@ -102,8 +106,8 @@ app.listen(PORT, () => {
 ║  API Endpoints:                                           ║
 ║  • Auth: http://localhost:${PORT}/api/auth                  ║
 ║  • Admin: http://localhost:${PORT}/api/admin                ║
-║  • Tours: http://localhost:${PORT}/api/tours                ║
-║  • Reservations: http://localhost:${PORT}/api/reservations  ║
+║  • Trips: http://localhost:${PORT}/api/trips                ║
+║  • Reservations: http://localhost:${PORT}/api/user/reservations  ║
 ║                                                           ║
 ║  Admin Dashboard: http://localhost:${PORT}/admin            ║
 ║                                                           ║

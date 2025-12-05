@@ -1,0 +1,196 @@
+const { Carriage } = require('../models');
+const { Op } = require('sequelize');
+
+// @desc    Get all carriages
+// @route   GET /api/admin/carriages
+// @access  Private/Admin
+exports.getAllCarriages = async (req, res) => {
+  try {
+    const carriages = await Carriage.findAll({
+      order: [
+        ['class_type', 'ASC'],
+        ['name', 'ASC'],
+      ],
+    });
+
+    res.json({
+      success: true,
+      data: carriages.map(carriage => ({
+        id: carriage.id,
+        name: carriage.name,
+        classType: carriage.class_type,
+        seatsCount: carriage.seats_count,
+        model: carriage.model,
+        description: carriage.description,
+        createdAt: carriage.created_at,
+        updatedAt: carriage.updated_at,
+      })),
+    });
+  } catch (error) {
+    console.error('Get carriages error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch carriages',
+    });
+  }
+};
+
+// @desc    Create carriage
+// @route   POST /api/admin/carriages
+// @access  Private/Admin
+exports.createCarriage = async (req, res) => {
+  try {
+    const { name, class_type, seats_count, model, description } = req.body;
+
+    // Validation
+    if (!name || !class_type || !seats_count) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide name, class_type, and seats_count',
+      });
+    }
+
+    if (!['first', 'second', 'economic'].includes(class_type)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid class_type. Must be first, second, or economic',
+      });
+    }
+
+    if (seats_count < 1) {
+      return res.status(400).json({
+        success: false,
+        message: 'Seats count must be at least 1',
+      });
+    }
+
+    const carriage = await Carriage.create({
+      name,
+      class_type,
+      seats_count,
+      model: model || null,
+      description: description || null,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Carriage created successfully',
+      data: {
+        carriage: {
+          id: carriage.id,
+          name: carriage.name,
+          classType: carriage.class_type,
+          seatsCount: carriage.seats_count,
+          model: carriage.model,
+          description: carriage.description,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Create carriage error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create carriage',
+    });
+  }
+};
+
+// @desc    Update carriage
+// @route   PUT /api/admin/carriages/:id
+// @access  Private/Admin
+exports.updateCarriage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, class_type, seats_count, model, description } = req.body;
+
+    const carriage = await Carriage.findByPk(id);
+    if (!carriage) {
+      return res.status(404).json({
+        success: false,
+        message: 'Carriage not found',
+      });
+    }
+
+    // Validate class_type if provided
+    if (class_type && !['first', 'second', 'economic'].includes(class_type)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid class_type. Must be first, second, or economic',
+      });
+    }
+
+    // Validate seats_count if provided
+    if (seats_count !== undefined && seats_count < 1) {
+      return res.status(400).json({
+        success: false,
+        message: 'Seats count must be at least 1',
+      });
+    }
+
+    await carriage.update({
+      name: name || carriage.name,
+      class_type: class_type || carriage.class_type,
+      seats_count: seats_count !== undefined ? seats_count : carriage.seats_count,
+      model: model !== undefined ? model : carriage.model,
+      description: description !== undefined ? description : carriage.description,
+      updated_at: new Date(),
+    });
+
+    res.json({
+      success: true,
+      message: 'Carriage updated successfully',
+      data: {
+        carriage: {
+          id: carriage.id,
+          name: carriage.name,
+          classType: carriage.class_type,
+          seatsCount: carriage.seats_count,
+          model: carriage.model,
+          description: carriage.description,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Update carriage error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update carriage',
+    });
+  }
+};
+
+// @desc    Delete carriage
+// @route   DELETE /api/admin/carriages/:id
+// @access  Private/Admin
+exports.deleteCarriage = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const carriage = await Carriage.findByPk(id);
+    if (!carriage) {
+      return res.status(404).json({
+        success: false,
+        message: 'Carriage not found',
+      });
+    }
+
+    await carriage.destroy();
+
+    res.json({
+      success: true,
+      message: 'Carriage deleted successfully',
+    });
+  } catch (error) {
+    console.error('Delete carriage error:', error);
+    if (error.name === 'SequelizeForeignKeyConstraintError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot delete carriage that is used in trains',
+      });
+    }
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete carriage',
+    });
+  }
+};

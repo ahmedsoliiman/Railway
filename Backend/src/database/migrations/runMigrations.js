@@ -52,6 +52,22 @@ async function runMigrations() {
     `);
     console.log('✅ Stations table created\n');
 
+    // Create Carriages Table
+    console.log('Creating carriages table...');
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS carriages (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        class_type VARCHAR(50) NOT NULL CHECK (class_type IN ('first', 'second', 'economic')),
+        seats_count INTEGER NOT NULL,
+        model VARCHAR(100),
+        description TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log('✅ Carriages table created\n');
+
     // Create Trains Table
     console.log('Creating trains table...');
     await db.query(`
@@ -60,7 +76,7 @@ async function runMigrations() {
         train_number VARCHAR(50) UNIQUE NOT NULL,
         name VARCHAR(255) NOT NULL,
         type VARCHAR(50) NOT NULL,
-        total_seats INTEGER NOT NULL,
+        total_seats INTEGER DEFAULT 0,
         first_class_seats INTEGER DEFAULT 0,
         second_class_seats INTEGER DEFAULT 0,
         facilities TEXT,
@@ -70,6 +86,20 @@ async function runMigrations() {
       );
     `);
     console.log('✅ Trains table created\n');
+
+    // Create Train Carriages Junction Table
+    console.log('Creating train_carriages table...');
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS train_carriages (
+        id SERIAL PRIMARY KEY,
+        train_id INTEGER REFERENCES trains(id) ON DELETE CASCADE,
+        carriage_id INTEGER REFERENCES carriages(id) ON DELETE CASCADE,
+        quantity INTEGER DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(train_id, carriage_id)
+      );
+    `);
+    console.log('✅ Train carriages table created\n');
 
     // Create Tours Table
     console.log('Creating tours table...');
@@ -143,6 +173,21 @@ async function runMigrations() {
       ON CONFLICT DO NOTHING;
     `);
     console.log('✅ Sample stations inserted\n');
+
+    // Insert sample carriages
+    console.log('Inserting sample carriages...');
+    await db.query(`
+      INSERT INTO carriages (name, class_type, seats_count, model, description)
+      VALUES 
+        ('First Class A1', 'first', 40, 'Premium Suite', 'Luxury seating with extra legroom and reclining seats'),
+        ('First Class A2', 'first', 50, 'Business Class', 'Comfortable first class with AC and WiFi'),
+        ('Second Class B1', 'second', 60, 'Standard Plus', 'Comfortable second class seating with AC'),
+        ('Second Class B2', 'second', 70, 'Standard', 'Regular second class with basic amenities'),
+        ('Economic C1', 'economic', 80, 'Economy', 'Budget-friendly seating for cost-conscious travelers'),
+        ('Economic C2', 'economic', 90, 'Basic', 'Basic economic class with essential facilities')
+      ON CONFLICT DO NOTHING;
+    `);
+    console.log('✅ Sample carriages inserted\n');
 
     // Insert sample trains
     console.log('Inserting sample trains...');
