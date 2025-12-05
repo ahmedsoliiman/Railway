@@ -511,12 +511,12 @@ class AdminService {
     required int trainId,
     required int originStationId,
     required int destinationStationId,
+    required DateTime departure,
     required DateTime departureTime,
     required DateTime arrivalTime,
     required double firstClassPrice,
     required double secondClassPrice,
-    required int availableSeats,
-    String? status,
+    required int quantities,
   }) async {
     try {
       final headers = await _getHeaders();
@@ -527,12 +527,12 @@ class AdminService {
           'train_id': trainId,
           'origin_station_id': originStationId,
           'destination_station_id': destinationStationId,
+          'departure': departure.toIso8601String().split('T')[0],
           'departure_time': departureTime.toIso8601String(),
           'arrival_time': arrivalTime.toIso8601String(),
           'first_class_price': firstClassPrice,
           'second_class_price': secondClassPrice,
-          'available_seats': availableSeats,
-          'status': status ?? 'scheduled',
+          'quantities': quantities,
         }),
       );
 
@@ -574,12 +574,12 @@ class AdminService {
     int? trainId,
     int? originStationId,
     int? destinationStationId,
+    DateTime? departure,
     DateTime? departureTime,
     DateTime? arrivalTime,
     double? firstClassPrice,
     double? secondClassPrice,
-    int? availableSeats,
-    String? status,
+    int? quantities,
   }) async {
     try {
       final headers = await _getHeaders();
@@ -590,12 +590,12 @@ class AdminService {
           if (trainId != null) 'train_id': trainId,
           if (originStationId != null) 'origin_station_id': originStationId,
           if (destinationStationId != null) 'destination_station_id': destinationStationId,
+          if (departure != null) 'departure': departure.toIso8601String().split('T')[0],
           if (departureTime != null) 'departure_time': departureTime.toIso8601String(),
           if (arrivalTime != null) 'arrival_time': arrivalTime.toIso8601String(),
           if (firstClassPrice != null) 'first_class_price': firstClassPrice,
           if (secondClassPrice != null) 'second_class_price': secondClassPrice,
-          if (availableSeats != null) 'available_seats': availableSeats,
-          if (status != null) 'status': status,
+          if (quantities != null) 'quantities': quantities,
         }),
       );
 

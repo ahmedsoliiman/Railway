@@ -190,20 +190,20 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
 
                       // Availability
                       Card(
-                        color: trip.availableSeats < 10 ? AppTheme.dangerColor.withOpacity(0.1) : AppTheme.successColor.withOpacity(0.1),
+                        color: trip.quantities < 10 ? AppTheme.dangerColor.withOpacity(0.1) : AppTheme.successColor.withOpacity(0.1),
                         child: Padding(
                           padding: const EdgeInsets.all(16),
                           child: Row(
                             children: [
                               Icon(
-                                trip.availableSeats < 10 ? Icons.warning_amber : Icons.check_circle,
-                                color: trip.availableSeats < 10 ? AppTheme.dangerColor : AppTheme.successColor,
+                                trip.quantities < 10 ? Icons.warning_amber : Icons.check_circle,
+                                color: trip.quantities < 10 ? AppTheme.dangerColor : AppTheme.successColor,
                               ),
                               const SizedBox(width: 12),
                               Text(
-                                '${trip.availableSeats} seats available',
+                                '${trip.quantities} seats available',
                                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  color: trip.availableSeats < 10 ? AppTheme.dangerColor : AppTheme.successColor,
+                                  color: trip.quantities < 10 ? AppTheme.dangerColor : AppTheme.successColor,
                                 ),
                               ),
                             ],
@@ -237,7 +237,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
       bottomNavigationBar: Consumer<TripProvider>(
         builder: (context, tripProvider, child) {
           final trip = tripProvider.selectedTrip;
-          if (trip == null || trip.availableSeats == 0) return const SizedBox.shrink();
+          if (trip == null || trip.quantities == 0) return const SizedBox.shrink();
 
           return SafeArea(
             child: Padding(

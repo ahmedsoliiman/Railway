@@ -12,10 +12,9 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final _originController = TextEditingController();
-  final _destinationController = TextEditingController();
+  int? _selectedOriginId;
+  int? _selectedDestinationId;
   DateTime? _selectedDate;
-  String? _selectedTrainType;
 
   @override
   void initState() {
@@ -27,9 +26,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final tripProvider = Provider.of<TripProvider>(context, listen: false);
     
-    // Load user data and trips in parallel
+    // Load user data, stations, and trips in parallel
     await Future.wait([
       authProvider.fetchCurrentUser(),
+      tripProvider.loadStations(),
       tripProvider.searchTrips(),
     ]);
   }
@@ -50,20 +50,14 @@ class _HomeScreenState extends State<HomeScreen> {
     final tripProvider = Provider.of<TripProvider>(context, listen: false);
     
     await tripProvider.loadTrips(
+      originStationId: _selectedOriginId,
+      destinationStationId: _selectedDestinationId,
       date: _selectedDate,
-      trainType: _selectedTrainType,
     );
     
     if (mounted) {
       Navigator.pushNamed(context, '/trips');
     }
-  }
-
-  @override
-  void dispose() {
-    _originController.dispose();
-    _destinationController.dispose();
-    super.dispose();
   }
 
   @override
@@ -140,64 +134,74 @@ class _HomeScreenState extends State<HomeScreen> {
                   elevation: 4,
                   child: Padding(
                     padding: const EdgeInsets.all(20),
-                    child: Column(
-                      children: [
-                        TextField(
-                          controller: _originController,
-                          decoration: const InputDecoration(
-                            labelText: 'From (Origin)',
-                            prefixIcon: Icon(Icons.location_on_outlined),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: _destinationController,
-                          decoration: const InputDecoration(
-                            labelText: 'To (Destination)',
-                            prefixIcon: Icon(Icons.flag_outlined),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        InkWell(
-                          onTap: () => _selectDate(context),
-                          child: InputDecorator(
-                            decoration: const InputDecoration(
-                              labelText: 'Travel Date',
-                              prefixIcon: Icon(Icons.calendar_today_outlined),
+                    child: Consumer<TripProvider>(
+                      builder: (context, tripProvider, child) {
+                        return Column(
+                          children: [
+                            DropdownButtonFormField<int>(
+                              value: _selectedOriginId,
+                              decoration: const InputDecoration(
+                                labelText: 'From (Origin)',
+                                prefixIcon: Icon(Icons.location_on_outlined),
+                              ),
+                              items: [
+                                const DropdownMenuItem<int>(
+                                  value: null,
+                                  child: Text('Select origin station'),
+                                ),
+                                ...tripProvider.stations.map((station) => DropdownMenuItem<int>(
+                                  value: station.id,
+                                  child: Text('${station.name} (${station.city})'),
+                                )),
+                              ],
+                              onChanged: (value) => setState(() => _selectedOriginId = value),
                             ),
-                            child: Text(
-                              _selectedDate == null
-                                  ? 'Select date'
-                                  : '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}',
+                            const SizedBox(height: 16),
+                            DropdownButtonFormField<int>(
+                              value: _selectedDestinationId,
+                              decoration: const InputDecoration(
+                                labelText: 'To (Destination)',
+                                prefixIcon: Icon(Icons.flag_outlined),
+                              ),
+                              items: [
+                                const DropdownMenuItem<int>(
+                                  value: null,
+                                  child: Text('Select destination station'),
+                                ),
+                                ...tripProvider.stations.map((station) => DropdownMenuItem<int>(
+                                  value: station.id,
+                                  child: Text('${station.name} (${station.city})'),
+                                )),
+                              ],
+                              onChanged: (value) => setState(() => _selectedDestinationId = value),
                             ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        DropdownButtonFormField<String>(
-                          value: _selectedTrainType,
-                          decoration: const InputDecoration(
-                            labelText: 'Train Type (Optional)',
-                            prefixIcon: Icon(Icons.train_outlined),
-                            helperText: 'Filter by train type',
-                          ),
-                          items: const [
-                            DropdownMenuItem(value: null, child: Text('All Types')),
-                            DropdownMenuItem(value: 'Premium', child: Text('Premium')),
-                            DropdownMenuItem(value: 'Express', child: Text('Express')),
-                            DropdownMenuItem(value: 'Standard', child: Text('Standard')),
+                            const SizedBox(height: 16),
+                            InkWell(
+                              onTap: () => _selectDate(context),
+                              child: InputDecorator(
+                                decoration: const InputDecoration(
+                                  labelText: 'Travel Date',
+                                  prefixIcon: Icon(Icons.calendar_today_outlined),
+                                ),
+                                child: Text(
+                                  _selectedDate == null
+                                      ? 'Select date'
+                                      : '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}',
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                onPressed: _searchTrips,
+                                icon: const Icon(Icons.search),
+                                label: const Text('Search Trains'),
+                              ),
+                            ),
                           ],
-                          onChanged: (value) => setState(() => _selectedTrainType = value),
-                        ),
-                        const SizedBox(height: 24),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: _searchTrips,
-                            icon: const Icon(Icons.search),
-                            label: const Text('Search Trains'),
-                          ),
-                        ),
-                      ],
+                        );
+                      },
                     ),
                   ),
                 ),

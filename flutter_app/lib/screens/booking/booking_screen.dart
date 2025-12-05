@@ -188,7 +188,7 @@ class _BookingScreenState extends State<BookingScreen> {
                           style: Theme.of(context).textTheme.displaySmall,
                         ),
                         IconButton(
-                          onPressed: _numberOfSeats < trip.availableSeats
+                          onPressed: _numberOfSeats < trip.quantities
                               ? () => setState(() => _numberOfSeats++)
                               : null,
                           icon: const Icon(Icons.add_circle_outline),

@@ -11,12 +11,12 @@ class Trip {
   final int destinationStationId;
   final String destinationName;
   final String destinationCity;
+  final DateTime departure;
   final DateTime departureTime;
   final DateTime arrivalTime;
   final double? firstClassPrice;
   final double? secondClassPrice;
-  final int availableSeats;
-  final String status;
+  final int quantities;
 
   Trip({
     required this.id,
@@ -31,12 +31,12 @@ class Trip {
     required this.destinationStationId,
     required this.destinationName,
     required this.destinationCity,
+    required this.departure,
     required this.departureTime,
     required this.arrivalTime,
     this.firstClassPrice,
     this.secondClassPrice,
-    required this.availableSeats,
-    required this.status,
+    required this.quantities,
   });
 
   factory Trip.fromJson(Map<String, dynamic> json) {
@@ -58,6 +58,7 @@ class Trip {
       destinationStationId: json['destinationStationId'] ?? json['destination_station_id'],
       destinationName: arrivalStationData?['name'] ?? json['destination_name'] ?? '',
       destinationCity: arrivalStationData?['city'] ?? json['destination_city'] ?? '',
+      departure: DateTime.parse(json['departure']),
       departureTime: DateTime.parse(json['departureTime'] ?? json['departure_time']),
       arrivalTime: DateTime.parse(json['arrivalTime'] ?? json['arrival_time']),
       firstClassPrice: (json['firstClassPrice'] ?? json['first_class_price']) != null 
@@ -66,8 +67,7 @@ class Trip {
       secondClassPrice: (json['secondClassPrice'] ?? json['second_class_price']) != null 
           ? double.parse((json['secondClassPrice'] ?? json['second_class_price']).toString()) 
           : null,
-      availableSeats: json['availableSeats'] ?? json['available_seats'] ?? 0,
-      status: json['status'],
+      quantities: json['quantities'] ?? 0,
     );
   }
 
@@ -95,12 +95,12 @@ class Trip {
       'destination_station_id': destinationStationId,
       'destination_name': destinationName,
       'destination_city': destinationCity,
+      'departure': departure.toIso8601String().split('T')[0],
       'departure_time': departureTime.toIso8601String(),
       'arrival_time': arrivalTime.toIso8601String(),
       'first_class_price': firstClassPrice,
       'second_class_price': secondClassPrice,
-      'available_seats': availableSeats,
-      'status': status,
+      'quantities': quantities,
     };
   }
 }

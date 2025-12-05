@@ -327,23 +327,23 @@ class AdminProvider with ChangeNotifier {
     required int trainId,
     required int originStationId,
     required int destinationStationId,
+    required DateTime departure,
     required DateTime departureTime,
     required DateTime arrivalTime,
     required double firstClassPrice,
     required double secondClassPrice,
-    required int availableSeats,
-    String? status,
+    required int quantities,
   }) async {
     final response = await _adminService.createTrip(
       trainId: trainId,
       originStationId: originStationId,
       destinationStationId: destinationStationId,
+      departure: departure,
       departureTime: departureTime,
       arrivalTime: arrivalTime,
       firstClassPrice: firstClassPrice,
       secondClassPrice: secondClassPrice,
-      availableSeats: availableSeats,
-      status: status,
+      quantities: quantities,
     );
 
     if (response['success']) {
@@ -358,24 +358,24 @@ class AdminProvider with ChangeNotifier {
     int? trainId,
     int? originStationId,
     int? destinationStationId,
+    DateTime? departure,
     DateTime? departureTime,
     DateTime? arrivalTime,
     double? firstClassPrice,
     double? secondClassPrice,
-    int? availableSeats,
-    String? status,
+    int? quantities,
   }) async {
     final response = await _adminService.updateTrip(
       id: id,
       trainId: trainId,
       originStationId: originStationId,
       destinationStationId: destinationStationId,
+      departure: departure,
       departureTime: departureTime,
       arrivalTime: arrivalTime,
       firstClassPrice: firstClassPrice,
       secondClassPrice: secondClassPrice,
-      availableSeats: availableSeats,
-      status: status,
+      quantities: quantities,
     );
 
     if (response['success']) {

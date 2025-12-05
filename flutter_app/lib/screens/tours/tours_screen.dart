@@ -323,9 +323,9 @@ class _TripsScreenState extends State<TripsScreen> {
                                 style: Theme.of(context).textTheme.bodySmall,
                               ),
                               Text(
-                                '${trip.availableSeats} seats left',
+                                '${trip.quantities} seats left',
                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: trip.availableSeats < 10 ? AppTheme.dangerColor : AppTheme.successColor,
+                                  color: trip.quantities < 10 ? AppTheme.dangerColor : AppTheme.successColor,
                                 ),
                               ),
                             ],

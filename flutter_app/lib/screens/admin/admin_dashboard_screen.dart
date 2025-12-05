@@ -1209,13 +1209,13 @@ class AdminTripsPage extends StatelessWidget {
   void _showTripDialog(BuildContext context, AdminProvider adminProvider, {Trip? trip}) {
     final firstClassPriceController = TextEditingController(text: trip?.firstClassPrice?.toString());
     final secondClassPriceController = TextEditingController(text: trip?.secondClassPrice?.toString());
-    final availableSeatsController = TextEditingController(text: trip?.availableSeats.toString());
+    final quantitiesController = TextEditingController(text: trip?.quantities.toString());
     int? selectedTrainId = trip?.trainId;
     int? selectedOriginId = trip?.originStationId;
     int? selectedDestinationId = trip?.destinationStationId;
+    DateTime departure = trip?.departure ?? DateTime.now().add(const Duration(days: 1));
     DateTime departureTime = trip?.departureTime ?? DateTime.now().add(const Duration(days: 1));
     DateTime arrivalTime = trip?.arrivalTime ?? DateTime.now().add(const Duration(days: 1, hours: 4));
-    String selectedStatus = trip?.status ?? 'scheduled';
     final formKey = GlobalKey<FormState>();
 
     showDialog(
@@ -1326,18 +1326,10 @@ class AdminTripsPage extends StatelessWidget {
                     validator: (v) => double.tryParse(v ?? '') == null ? 'Invalid' : null,
                   ),
                   TextFormField(
-                    controller: availableSeatsController,
-                    decoration: const InputDecoration(labelText: 'Available Seats'),
+                    controller: quantitiesController,
+                    decoration: const InputDecoration(labelText: 'Quantities'),
                     keyboardType: TextInputType.number,
                     validator: (v) => int.tryParse(v ?? '') == null ? 'Invalid' : null,
-                  ),
-                  DropdownButtonFormField<String>(
-                    value: selectedStatus,
-                    decoration: const InputDecoration(labelText: 'Status'),
-                    items: ['scheduled', 'boarding', 'departed', 'arrived', 'cancelled'].map((status) {
-                      return DropdownMenuItem(value: status, child: Text(status.toUpperCase()));
-                    }).toList(),
-                    onChanged: (value) => setState(() => selectedStatus = value!),
                   ),
                 ],
               ),
@@ -1357,24 +1349,24 @@ class AdminTripsPage extends StatelessWidget {
                         trainId: selectedTrainId!,
                         originStationId: selectedOriginId!,
                         destinationStationId: selectedDestinationId!,
+                        departure: departure,
                         departureTime: departureTime,
                         arrivalTime: arrivalTime,
                         firstClassPrice: double.parse(firstClassPriceController.text),
                         secondClassPrice: double.parse(secondClassPriceController.text),
-                        availableSeats: int.parse(availableSeatsController.text),
-                        status: selectedStatus,
+                        quantities: int.parse(quantitiesController.text),
                       )
                     : await adminProvider.updateTrip(
                         id: trip.id,
                         trainId: selectedTrainId,
                         originStationId: selectedOriginId,
                         destinationStationId: selectedDestinationId,
+                        departure: departure,
                         departureTime: departureTime,
                         arrivalTime: arrivalTime,
                         firstClassPrice: double.parse(firstClassPriceController.text),
                         secondClassPrice: double.parse(secondClassPriceController.text),
-                        availableSeats: int.parse(availableSeatsController.text),
-                        status: selectedStatus,
+                        quantities: int.parse(quantitiesController.text),
                       );
 
                 if (context.mounted) {
@@ -1433,8 +1425,7 @@ class AdminTripsPage extends StatelessWidget {
                                   DataColumn(label: Text('Departure')),
                                   DataColumn(label: Text('1st Class')),
                                   DataColumn(label: Text('2nd Class')),
-                                  DataColumn(label: Text('Seats')),
-                                  DataColumn(label: Text('Status')),
+                                  DataColumn(label: Text('Quantities')),
                                   DataColumn(label: Text('Actions')),
                                 ],
                                 rows: adminProvider.trips.map((trip) {
@@ -1444,8 +1435,7 @@ class AdminTripsPage extends StatelessWidget {
                                     DataCell(Text(DateFormat('MMM dd, HH:mm').format(trip.departureTime))),
                                     DataCell(Text('\$${trip.firstClassPrice?.toStringAsFixed(2)}')),
                                     DataCell(Text('\$${trip.secondClassPrice?.toStringAsFixed(2)}')),
-                                    DataCell(Text('${trip.availableSeats}')),
-                                    DataCell(Text(trip.status.toUpperCase())),
+                                    DataCell(Text('${trip.quantities}')),
                                     DataCell(Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
