@@ -21,13 +21,15 @@ const generateVerificationToken = () => {
 // @access  Public
 exports.signup = async (req, res) => {
   try {
-    const { fullName, email, password, dateOfBirth, nationalId } = req.body;
+    // Accept both camelCase and snake_case
+    const fullName = req.body.fullName || req.body.full_name;
+    const { email, password } = req.body;
 
     // Validation
     if (!fullName || !email || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide all required fields',
+        message: 'Please provide all required fields (fullName, email, password)',
       });
     }
 
@@ -38,17 +40,6 @@ exports.signup = async (req, res) => {
         success: false,
         message: 'Email already registered',
       });
-    }
-
-    // Check national ID if provided
-    if (nationalId) {
-      const existingNationalId = await User.findOne({ where: { national_id: nationalId } });
-      if (existingNationalId) {
-        return res.status(400).json({
-          success: false,
-          message: 'National ID already registered',
-        });
-      }
     }
 
     // Hash password
