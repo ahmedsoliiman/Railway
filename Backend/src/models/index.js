@@ -34,10 +34,10 @@ Trip.belongsTo(Train, { foreignKey: 'train_id', as: 'train' });
 Train.hasMany(Trip, { foreignKey: 'train_id', as: 'trips' });
 
 // Trip <-> Station (Many-to-One for departure and arrival)
-Trip.belongsTo(Station, { foreignKey: 'from_station_id', as: 'departureStation' });
-Trip.belongsTo(Station, { foreignKey: 'to_station_id', as: 'arrivalStation' });
-Station.hasMany(Trip, { foreignKey: 'from_station_id', as: 'departingTrips' });
-Station.hasMany(Trip, { foreignKey: 'to_station_id', as: 'arrivingTrips' });
+Trip.belongsTo(Station, { foreignKey: 'origin_station_id', as: 'departureStation' });
+Trip.belongsTo(Station, { foreignKey: 'destination_station_id', as: 'arrivalStation' });
+Station.hasMany(Trip, { foreignKey: 'origin_station_id', as: 'departingTrips' });
+Station.hasMany(Trip, { foreignKey: 'destination_station_id', as: 'arrivingTrips' });
 
 // Reservation <-> User (Many-to-One)
 Reservation.belongsTo(User, { foreignKey: 'user_id', as: 'user' });

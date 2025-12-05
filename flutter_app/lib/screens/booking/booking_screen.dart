@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../config/theme.dart';
-import '../../providers/tour_provider.dart';
+import '../../providers/trip_provider.dart';
 
 class BookingScreen extends StatefulWidget {
   const BookingScreen({super.key});
@@ -18,23 +18,23 @@ class _BookingScreenState extends State<BookingScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final tourId = ModalRoute.of(context)!.settings.arguments as int;
-    _loadTourDetails(tourId);
+    final tripId = ModalRoute.of(context)!.settings.arguments as int;
+    _loadTripDetails(tripId);
   }
 
-  Future<void> _loadTourDetails(int tourId) async {
-    final tourProvider = Provider.of<TourProvider>(context, listen: false);
-    await tourProvider.loadTourDetails(tourId);
+  Future<void> _loadTripDetails(int tripId) async {
+    final tripProvider = Provider.of<TripProvider>(context, listen: false);
+    await tripProvider.loadTripDetails(tripId);
   }
 
   Future<void> _handleBooking() async {
     setState(() => _isProcessing = true);
 
-    final tourProvider = Provider.of<TourProvider>(context, listen: false);
-    final tour = tourProvider.selectedTour!;
+    final tripProvider = Provider.of<TripProvider>(context, listen: false);
+    final trip = tripProvider.selectedTrip!;
 
-    final response = await tourProvider.createReservation(
-      tourId: tour.id,
+    final response = await tripProvider.createReservation(
+      tripId: trip.id,
       seatClass: _selectedClass.toLowerCase(), // Convert to lowercase for backend
       numberOfSeats: _numberOfSeats,
     );
@@ -93,22 +93,22 @@ class _BookingScreenState extends State<BookingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Book Tour'),
+        title: const Text('Book Trip'),
       ),
-      body: Consumer<TourProvider>(
-        builder: (context, tourProvider, child) {
-          if (tourProvider.isLoading) {
+      body: Consumer<TripProvider>(
+        builder: (context, tripProvider, child) {
+          if (tripProvider.isLoading) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final tour = tourProvider.selectedTour;
-          if (tour == null) {
-            return const Center(child: Text('Tour not found'));
+          final trip = tripProvider.selectedTrip;
+          if (trip == null) {
+            return const Center(child: Text('Trip not found'));
           }
 
           final pricePerSeat = _selectedClass == 'First' 
-              ? (tour.firstClassPrice ?? 0) 
-              : (tour.secondClassPrice ?? 0);
+              ? (trip.firstClassPrice ?? 0) 
+              : (trip.secondClassPrice ?? 0);
           final totalPrice = pricePerSeat * _numberOfSeats;
 
           return SingleChildScrollView(
@@ -116,7 +116,7 @@ class _BookingScreenState extends State<BookingScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Tour Summary
+                // Trip Summary
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
@@ -124,12 +124,12 @@ class _BookingScreenState extends State<BookingScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          tour.trainName,
+                          trip.trainName,
                           style: Theme.of(context).textTheme.titleLarge,
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          '${tour.originName} → ${tour.destinationName}',
+                          '${trip.originName} → ${trip.destinationName}',
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                       ],
@@ -144,22 +144,22 @@ class _BookingScreenState extends State<BookingScreen> {
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 16),
-                if (tour.firstClassPrice != null)
+                if (trip.firstClassPrice != null)
                   RadioListTile<String>(
                     value: 'First',
                     groupValue: _selectedClass,
                     onChanged: (value) => setState(() => _selectedClass = value!),
                     title: const Text('First Class'),
-                    subtitle: Text('\$${tour.firstClassPrice!.toStringAsFixed(2)} per seat'),
+                    subtitle: Text('\$${trip.firstClassPrice!.toStringAsFixed(2)} per seat'),
                     secondary: const Icon(Icons.airline_seat_recline_extra),
                   ),
-                if (tour.secondClassPrice != null)
+                if (trip.secondClassPrice != null)
                   RadioListTile<String>(
                     value: 'Second',
                     groupValue: _selectedClass,
                     onChanged: (value) => setState(() => _selectedClass = value!),
                     title: const Text('Second Class'),
-                    subtitle: Text('\$${tour.secondClassPrice!.toStringAsFixed(2)} per seat'),
+                    subtitle: Text('\$${trip.secondClassPrice!.toStringAsFixed(2)} per seat'),
                     secondary: const Icon(Icons.event_seat),
                   ),
                 const SizedBox(height: 24),
@@ -188,7 +188,7 @@ class _BookingScreenState extends State<BookingScreen> {
                           style: Theme.of(context).textTheme.displaySmall,
                         ),
                         IconButton(
-                          onPressed: _numberOfSeats < tour.availableSeats
+                          onPressed: _numberOfSeats < trip.availableSeats
                               ? () => setState(() => _numberOfSeats++)
                               : null,
                           icon: const Icon(Icons.add_circle_outline),

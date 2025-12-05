@@ -62,7 +62,13 @@ exports.createTrain = async (req, res) => {
   const t = await sequelize.transaction();
 
   try {
-    const { trainNumber, name, type, carriages, facilities, status } = req.body;
+    // Accept both camelCase (frontend) and snake_case (API)
+    const trainNumber = req.body.trainNumber || req.body.train_number;
+    const name = req.body.name;
+    const type = req.body.type;
+    const carriages = req.body.carriages;
+    const facilities = req.body.facilities;
+    const status = req.body.status;
 
     // Validation
     if (!trainNumber || !name || !carriages || carriages.length === 0) {
@@ -198,7 +204,13 @@ exports.updateTrain = async (req, res) => {
 
   try {
     const { id } = req.params;
-    const { train_number, name, type, carriages, facilities, status } = req.body;
+    // Accept both camelCase (frontend) and snake_case (API)
+    const train_number = req.body.train_number || req.body.trainNumber;
+    const name = req.body.name;
+    const type = req.body.type;
+    const carriages = req.body.carriages;
+    const facilities = req.body.facilities;
+    const status = req.body.status;
 
     const train = await Train.findByPk(id);
     if (!train) {

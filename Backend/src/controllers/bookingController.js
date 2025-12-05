@@ -12,7 +12,7 @@ const generateBookingReference = () => {
 exports.getUserReservations = async (req, res) => {
   try {
     const reservations = await Reservation.findAll({
-      where: { user_id: req.user.userId },
+      where: { user_id: req.user.id },
       include: [
         {
           model: Trip,
@@ -31,13 +31,11 @@ exports.getUserReservations = async (req, res) => {
       success: true,
       data: reservations.map(r => ({
         id: r.id,
-        passengerName: r.passenger_name,
-        passengerNationalId: r.passenger_national_id,
         seatClass: r.seat_class,
         seatNumber: r.seat_number,
-        price: parseFloat(r.price),
+        numberOfSeats: r.number_of_seats,
+        totalPrice: parseFloat(r.total_price),
         bookingReference: r.booking_reference,
-        paymentStatus: r.payment_status,
         status: r.status,
         trip: {
           id: r.trip.id,
@@ -75,10 +73,10 @@ exports.createReservation = async (req, res) => {
   const t = await sequelize.transaction();
 
   try {
-    const { tourId, passengerName, passengerNationalId, seatClass } = req.body;
+    const { tourId, seatClass, numberOfSeats = 1 } = req.body;
 
     // Validation
-    if (!tourId || !passengerName || !passengerNationalId || !seatClass) {
+    if (!tourId || !seatClass) {
       await t.rollback();
       return res.status(400).json({
         success: false,
@@ -123,8 +121,9 @@ exports.createReservation = async (req, res) => {
       });
     }
 
-    // Get price
-    const price = seatClass === 'first' ? trip.first_class_price : trip.second_class_price;
+    // Get price per seat
+    const pricePerSeat = seatClass === 'first' ? trip.first_class_price : trip.second_class_price;
+    const totalPrice = pricePerSeat * numberOfSeats;
 
     // Generate booking reference
     const bookingReference = generateBookingReference();
@@ -132,16 +131,14 @@ exports.createReservation = async (req, res) => {
     // Create reservation with pending payment
     const reservation = await Reservation.create(
       {
-        user_id: req.user.userId,
+        user_id: req.user.id,
         trip_id: tourId,
-        passenger_name: passengerName,
-        passenger_national_id: passengerNationalId,
         seat_class: seatClass,
         seat_number: null, // Will assign after payment
-        price,
+        number_of_seats: numberOfSeats,
+        total_price: totalPrice,
         booking_reference: bookingReference,
-        payment_status: 'pending',
-        status: 'confirmed',
+        status: 'pending',
       },
       { transaction: t }
     );
@@ -149,12 +146,12 @@ exports.createReservation = async (req, res) => {
     // Temporarily reduce available seats
     if (seatClass === 'first') {
       await trip.update(
-        { available_first_class_seats: trip.available_first_class_seats - 1 },
+        { available_first_class_seats: trip.available_first_class_seats - numberOfSeats },
         { transaction: t }
       );
     } else {
       await trip.update(
-        { available_second_class_seats: trip.available_second_class_seats - 1 },
+        { available_second_class_seats: trip.available_second_class_seats - numberOfSeats },
         { transaction: t }
       );
     }
@@ -182,12 +179,11 @@ exports.createReservation = async (req, res) => {
       data: {
         reservation: {
           id: completeReservation.id,
-          passengerName: completeReservation.passenger_name,
-          passengerNationalId: completeReservation.passenger_national_id,
           seatClass: completeReservation.seat_class,
-          price: parseFloat(completeReservation.price),
+          numberOfSeats: completeReservation.number_of_seats,
+          totalPrice: parseFloat(completeReservation.total_price),
           bookingReference: completeReservation.booking_reference,
-          paymentStatus: completeReservation.payment_status,
+          status: completeReservation.status,
           trip: {
             id: completeReservation.trip.id,
             departureTime: completeReservation.trip.departure_time,
@@ -241,7 +237,7 @@ exports.processPayment = async (req, res) => {
     const reservation = await Reservation.findOne({
       where: {
         id,
-        user_id: req.user.userId,
+        user_id: req.user.id,
       },
       include: [{ model: Trip, as: 'trip' }],
       transaction: t,
@@ -256,7 +252,7 @@ exports.processPayment = async (req, res) => {
       });
     }
 
-    if (reservation.payment_status === 'completed') {
+    if (reservation.status === 'confirmed') {
       await t.rollback();
       return res.status(400).json({
         success: false,
@@ -308,7 +304,7 @@ exports.processPayment = async (req, res) => {
     // Update reservation
     await reservation.update(
       {
-        payment_status: 'completed',
+        status: 'confirmed',
         seat_number: seatNumber,
         updated_at: new Date(),
       },
@@ -340,13 +336,12 @@ exports.processPayment = async (req, res) => {
       data: {
         reservation: {
           id: updatedReservation.id,
-          passengerName: updatedReservation.passenger_name,
-          passengerNationalId: updatedReservation.passenger_national_id,
           seatClass: updatedReservation.seat_class,
           seatNumber: updatedReservation.seat_number,
-          price: parseFloat(updatedReservation.price),
+          numberOfSeats: updatedReservation.number_of_seats,
+          totalPrice: parseFloat(updatedReservation.total_price),
           bookingReference: updatedReservation.booking_reference,
-          paymentStatus: updatedReservation.payment_status,
+          status: updatedReservation.status,
           paymentMethod: paymentMethod,
           trip: {
             id: updatedReservation.trip.id,
@@ -390,7 +385,7 @@ exports.cancelReservation = async (req, res) => {
     const reservation = await Reservation.findOne({
       where: {
         id,
-        user_id: req.user.userId,
+        user_id: req.user.id,
       },
       include: [{ model: Trip, as: 'trip' }],
       transaction: t,
@@ -417,7 +412,6 @@ exports.cancelReservation = async (req, res) => {
     await reservation.update(
       {
         status: 'cancelled',
-        payment_status: reservation.payment_status === 'completed' ? 'refunded' : 'pending',
         updated_at: new Date(),
       },
       { transaction: t }
@@ -425,14 +419,15 @@ exports.cancelReservation = async (req, res) => {
 
     // Restore seat availability
     const trip = reservation.trip;
+    const seatsToRestore = reservation.number_of_seats || 1;
     if (reservation.seat_class === 'first') {
       await trip.update(
-        { available_first_class_seats: trip.available_first_class_seats + 1 },
+        { available_first_class_seats: trip.available_first_class_seats + seatsToRestore },
         { transaction: t }
       );
     } else {
       await trip.update(
-        { available_second_class_seats: trip.available_second_class_seats + 1 },
+        { available_second_class_seats: trip.available_second_class_seats + seatsToRestore },
         { transaction: t }
       );
     }
@@ -441,9 +436,7 @@ exports.cancelReservation = async (req, res) => {
 
     res.json({
       success: true,
-      message: reservation.payment_status === 'completed' 
-        ? 'Reservation cancelled. Refund will be processed.' 
-        : 'Reservation cancelled successfully',
+      message: 'Reservation cancelled successfully',
     });
   } catch (error) {
     await t.rollback();

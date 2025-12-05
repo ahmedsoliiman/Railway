@@ -12,7 +12,7 @@ exports.getDashboardStats = async (req, res) => {
       totalTrips,
       totalReservations,
       activeTrips,
-      pendingPayments,
+      pendingReservations,
     ] = await Promise.all([
       User.count(),
       Station.count(),
@@ -20,7 +20,7 @@ exports.getDashboardStats = async (req, res) => {
       Trip.count(),
       Reservation.count(),
       Trip.count({ where: { status: 'scheduled' } }),
-      Reservation.count({ where: { payment_status: 'pending' } }),
+      Reservation.count({ where: { status: 'pending' } }),
     ]);
 
     // Get recent reservations count (last 7 days)
@@ -38,14 +38,17 @@ exports.getDashboardStats = async (req, res) => {
     res.json({
       success: true,
       data: {
-        totalUsers,
-        totalStations,
-        totalTrains,
-        totalTrips,
-        totalReservations,
-        activeTrips,
-        pendingPayments,
-        recentReservations,
+        stats: {
+          total_users: totalUsers,
+          total_stations: totalStations,
+          total_trains: totalTrains,
+          total_trips: totalTrips,
+          total_reservations: totalReservations,
+          active_trips: activeTrips,
+          pending_reservations: pendingReservations,
+          recent_reservations: recentReservations,
+          total_revenue: 0,
+        },
       },
     });
   } catch (error) {

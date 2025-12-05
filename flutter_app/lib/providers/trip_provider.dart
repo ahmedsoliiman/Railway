@@ -1,23 +1,23 @@
 import 'package:flutter/material.dart';
-import '../models/tour.dart';
+import '../models/trip.dart';
 import '../models/station.dart';
 import '../models/reservation.dart';
 import '../services/api_service.dart';
 
-class TourProvider with ChangeNotifier {
+class TripProvider with ChangeNotifier {
   final ApiService _apiService = ApiService();
 
-  List<Tour> _tours = [];
+  List<Trip> _trips = [];
   List<Station> _stations = [];
   List<Reservation> _reservations = [];
-  Tour? _selectedTour;
+  Trip? _selectedTrip;
   bool _isLoading = false;
   String? _error;
 
-  List<Tour> get tours => _tours;
+  List<Trip> get trips => _trips;
   List<Station> get stations => _stations;
   List<Reservation> get reservations => _reservations;
-  Tour? get selectedTour => _selectedTour;
+  Trip? get selectedTrip => _selectedTrip;
   bool get isLoading => _isLoading;
   String? get error => _error;
 
@@ -31,8 +31,8 @@ class TourProvider with ChangeNotifier {
     }
   }
 
-  // Search tours
-  Future<void> searchTours({
+  // Search trips
+  Future<void> searchTrips({
     int? originId,
     int? destinationId,
     String? date,
@@ -41,20 +41,20 @@ class TourProvider with ChangeNotifier {
     _setError(null);
 
     try {
-      _tours = await _apiService.getTours(
+      _trips = await _apiService.getTrips(
         originId: originId,
         destinationId: destinationId,
         date: date,
       );
     } catch (e) {
-      _setError('Failed to load tours: $e');
+      _setError('Failed to load trips: $e');
     } finally {
       _setLoading(false);
     }
   }
 
-  // Load all tours with optional filters
-  Future<void> loadTours({
+  // Load all trips with optional filters
+  Future<void> loadTrips({
     int? originStationId,
     int? destinationStationId,
     DateTime? date,
@@ -65,7 +65,7 @@ class TourProvider with ChangeNotifier {
     _setError(null);
 
     try {
-      _tours = await _apiService.getTours(
+      _trips = await _apiService.getTrips(
         originId: originStationId,
         destinationId: destinationStationId,
         date: date?.toIso8601String().split('T')[0],
@@ -74,45 +74,45 @@ class TourProvider with ChangeNotifier {
       
       // Filter by seat class if specified (frontend filtering)
       if (seatClass != null) {
-        _tours = _tours.where((tour) {
+        _trips = _trips.where((trip) {
           if (seatClass.toLowerCase() == 'first') {
-            return tour.firstClassPrice != null && tour.firstClassPrice! > 0;
+            return trip.firstClassPrice != null && trip.firstClassPrice! > 0;
           } else if (seatClass.toLowerCase() == 'second') {
-            return tour.secondClassPrice != null && tour.secondClassPrice! > 0;
+            return trip.secondClassPrice != null && trip.secondClassPrice! > 0;
           }
           return true;
         }).toList();
       }
     } catch (e) {
-      _setError('Failed to load tours: $e');
+      _setError('Failed to load trips: $e');
     } finally {
       _setLoading(false);
     }
   }
 
-  // Load tour details
-  Future<void> loadTourDetails(int tourId) async {
+  // Load trip details
+  Future<void> loadTripDetails(int tripId) async {
     _setLoading(true);
     _setError(null);
 
     try {
-      _selectedTour = await _apiService.getTourDetails(tourId);
+      _selectedTrip = await _apiService.getTripDetails(tripId);
     } catch (e) {
-      _setError('Failed to load tour details: $e');
+      _setError('Failed to load trip details: $e');
     } finally {
       _setLoading(false);
     }
   }
 
-  // Set selected tour
-  void setSelectedTour(Tour tour) {
-    _selectedTour = tour;
+  // Set selected trip
+  void setSelectedTrip(Trip trip) {
+    _selectedTrip = trip;
     notifyListeners();
   }
 
   // Create reservation
   Future<Map<String, dynamic>> createReservation({
-    required int tourId,
+    required int tripId,
     required String seatClass,
     required int numberOfSeats,
   }) async {
@@ -120,7 +120,7 @@ class TourProvider with ChangeNotifier {
     _setError(null);
 
     final response = await _apiService.createReservation(
-      tourId: tourId,
+      tripId: tripId,
       seatClass: seatClass,
       numberOfSeats: numberOfSeats,
     );
@@ -203,8 +203,8 @@ class TourProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  void clearTours() {
-    _tours = [];
+  void clearTrips() {
+    _trips = [];
     notifyListeners();
   }
 }

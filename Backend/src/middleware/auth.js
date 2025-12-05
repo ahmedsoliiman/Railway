@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const db = require('../config/database');
+const { User } = require('../models');
 
 const authMiddleware = async (req, res, next) => {
   try {
@@ -16,20 +16,19 @@ const authMiddleware = async (req, res, next) => {
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
-    // Get user from database
-    const result = await db.query(
-      'SELECT id, full_name, email, role, is_verified FROM users WHERE id = $1',
-      [decoded.id]
-    );
+    // Get user from database using Sequelize
+    const user = await User.findByPk(decoded.id, {
+      attributes: ['id', 'full_name', 'email', 'role', 'is_verified']
+    });
 
-    if (result.rows.length === 0) {
+    if (!user) {
       return res.status(401).json({ 
         success: false, 
         message: 'Invalid token. User not found.' 
       });
     }
 
-    req.user = result.rows[0];
+    req.user = user.toJSON();
     next();
   } catch (error) {
     if (error.name === 'JsonWebTokenError') {

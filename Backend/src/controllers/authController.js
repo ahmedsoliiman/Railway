@@ -6,7 +6,7 @@ const emailService = require('../utils/emailService');
 
 // Generate JWT token
 const generateToken = (userId, role) => {
-  return jwt.sign({ userId, role }, process.env.JWT_SECRET, {
+  return jwt.sign({ id: userId, role }, process.env.JWT_SECRET, {
     expiresIn: '7d',
   });
 };
@@ -63,13 +63,10 @@ exports.signup = async (req, res) => {
     const user = await User.create({
       full_name: fullName,
       email,
-      password_hash: passwordHash,
-      date_of_birth: dateOfBirth || null,
-      national_id: nationalId || null,
+      password: passwordHash,
+      phone: null,
       role: 'user',
       is_verified: false,
-      verification_token: verificationToken,
-      verification_token_expires: verificationTokenExpires,
     });
 
     // Send verification email
@@ -130,7 +127,7 @@ exports.login = async (req, res) => {
     }
 
     // Check password
-    const isMatch = await bcrypt.compare(password, user.password_hash);
+    const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(401).json({
         success: false,
@@ -219,8 +216,8 @@ exports.verifyEmail = async (req, res) => {
 // @access  Private
 exports.getMe = async (req, res) => {
   try {
-    const user = await User.findByPk(req.user.userId, {
-      attributes: ['id', 'full_name', 'email', 'role', 'is_verified', 'date_of_birth', 'national_id', 'created_at'],
+    const user = await User.findByPk(req.user.id, {
+      attributes: ['id', 'full_name', 'email', 'phone', 'role', 'is_verified', 'created_at'],
     });
 
     if (!user) {
@@ -236,10 +233,9 @@ exports.getMe = async (req, res) => {
         id: user.id,
         fullName: user.full_name,
         email: user.email,
+        phone: user.phone,
         role: user.role,
         isVerified: user.is_verified,
-        dateOfBirth: user.date_of_birth,
-        nationalId: user.national_id,
         createdAt: user.created_at,
       },
     });

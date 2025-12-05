@@ -16,7 +16,6 @@ class _SignupScreenState extends State<SignupScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  final _phoneController = TextEditingController();
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
@@ -26,7 +25,6 @@ class _SignupScreenState extends State<SignupScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
-    _phoneController.dispose();
     super.dispose();
   }
 
@@ -39,7 +37,6 @@ class _SignupScreenState extends State<SignupScreen> {
       fullName: _fullNameController.text.trim(),
       email: _emailController.text.trim(),
       password: _passwordController.text,
-      phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
     );
 
     if (!mounted) return;
@@ -133,17 +130,6 @@ class _SignupScreenState extends State<SignupScreen> {
                       }
                       return null;
                     },
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Phone Field (Optional)
-                  TextFormField(
-                    controller: _phoneController,
-                    keyboardType: TextInputType.phone,
-                    decoration: const InputDecoration(
-                      labelText: 'Phone (Optional)',
-                      prefixIcon: Icon(Icons.phone_outlined),
-                    ),
                   ),
                   const SizedBox(height: 16),
 

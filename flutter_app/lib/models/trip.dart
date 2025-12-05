@@ -1,4 +1,4 @@
-class Tour {
+class Trip {
   final int id;
   final int trainId;
   final String trainName;
@@ -18,7 +18,7 @@ class Tour {
   final int availableSeats;
   final String status;
 
-  Tour({
+  Trip({
     required this.id,
     required this.trainId,
     required this.trainName,
@@ -39,25 +39,34 @@ class Tour {
     required this.status,
   });
 
-  factory Tour.fromJson(Map<String, dynamic> json) {
-    return Tour(
+  factory Trip.fromJson(Map<String, dynamic> json) {
+    // Handle both admin API format (with nested objects) and user API format (flat structure)
+    final trainData = json['train'];
+    final departureStationData = json['departureStation'];
+    final arrivalStationData = json['arrivalStation'];
+    
+    return Trip(
       id: json['id'],
-      trainId: json['train_id'],
-      trainName: json['train_name'],
-      trainNumber: json['train_number'],
-      trainType: json['train_type'] ?? 'Standard',
-      trainFacilities: json['train_facilities'],
-      originStationId: json['origin_station_id'],
-      originName: json['origin_name'],
-      originCity: json['origin_city'],
-      destinationStationId: json['destination_station_id'],
-      destinationName: json['destination_name'],
-      destinationCity: json['destination_city'],
-      departureTime: DateTime.parse(json['departure_time']),
-      arrivalTime: DateTime.parse(json['arrival_time']),
-      firstClassPrice: json['first_class_price'] != null ? double.parse(json['first_class_price'].toString()) : null,
-      secondClassPrice: json['second_class_price'] != null ? double.parse(json['second_class_price'].toString()) : null,
-      availableSeats: json['available_seats'],
+      trainId: json['trainId'] ?? json['train_id'],
+      trainName: trainData?['name'] ?? json['train_name'] ?? '',
+      trainNumber: trainData?['trainNumber'] ?? json['train_number'] ?? '',
+      trainType: trainData?['type'] ?? json['train_type'] ?? 'Standard',
+      trainFacilities: trainData?['facilities'] ?? json['train_facilities'],
+      originStationId: json['originStationId'] ?? json['origin_station_id'],
+      originName: departureStationData?['name'] ?? json['origin_name'] ?? '',
+      originCity: departureStationData?['city'] ?? json['origin_city'] ?? '',
+      destinationStationId: json['destinationStationId'] ?? json['destination_station_id'],
+      destinationName: arrivalStationData?['name'] ?? json['destination_name'] ?? '',
+      destinationCity: arrivalStationData?['city'] ?? json['destination_city'] ?? '',
+      departureTime: DateTime.parse(json['departureTime'] ?? json['departure_time']),
+      arrivalTime: DateTime.parse(json['arrivalTime'] ?? json['arrival_time']),
+      firstClassPrice: (json['firstClassPrice'] ?? json['first_class_price']) != null 
+          ? double.parse((json['firstClassPrice'] ?? json['first_class_price']).toString()) 
+          : null,
+      secondClassPrice: (json['secondClassPrice'] ?? json['second_class_price']) != null 
+          ? double.parse((json['secondClassPrice'] ?? json['second_class_price']).toString()) 
+          : null,
+      availableSeats: json['availableSeats'] ?? json['available_seats'] ?? 0,
       status: json['status'],
     );
   }

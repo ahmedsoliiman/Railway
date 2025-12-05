@@ -1,7 +1,7 @@
 class Reservation {
   final int id;
   final int userId;
-  final int tourId;
+  final int tripId;
   final String seatClass;
   final String? seatNumber;
   final int numberOfSeats;
@@ -10,7 +10,7 @@ class Reservation {
   final String status;
   final DateTime createdAt;
   
-  // Tour details
+  // Trip details
   final String? trainName;
   final String? trainNumber;
   final String? originName;
@@ -19,12 +19,12 @@ class Reservation {
   final String? destinationCity;
   final DateTime? departureTime;
   final DateTime? arrivalTime;
-  final String? tourStatus;
+  final String? tripStatus;
 
   Reservation({
     required this.id,
     required this.userId,
-    required this.tourId,
+    required this.tripId,
     required this.seatClass,
     this.seatNumber,
     required this.numberOfSeats,
@@ -40,14 +40,14 @@ class Reservation {
     this.destinationCity,
     this.departureTime,
     this.arrivalTime,
-    this.tourStatus,
+    this.tripStatus,
   });
 
   factory Reservation.fromJson(Map<String, dynamic> json) {
     return Reservation(
       id: json['id'],
       userId: json['user_id'],
-      tourId: json['tour_id'],
+      tripId: json['trip_id'],
       seatClass: json['seat_class'],
       seatNumber: json['seat_number'],
       numberOfSeats: json['number_of_seats'],
@@ -63,7 +63,7 @@ class Reservation {
       destinationCity: json['destination_city'],
       departureTime: json['departure_time'] != null ? DateTime.parse(json['departure_time']) : null,
       arrivalTime: json['arrival_time'] != null ? DateTime.parse(json['arrival_time']) : null,
-      tourStatus: json['tour_status'],
+      tripStatus: json['trip_status'],
     );
   }
 
@@ -82,7 +82,7 @@ class Reservation {
     return {
       'id': id,
       'user_id': userId,
-      'tour_id': tourId,
+      'trip_id': tripId,
       'seat_class': seatClass,
       'seat_number': seatNumber,
       'number_of_seats': numberOfSeats,
@@ -98,7 +98,7 @@ class Reservation {
       'destination_city': destinationCity,
       'departure_time': departureTime?.toIso8601String(),
       'arrival_time': arrivalTime?.toIso8601String(),
-      'tour_status': tourStatus,
+      'trip_status': tripStatus,
     };
   }
 }

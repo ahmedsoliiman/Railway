@@ -15,7 +15,7 @@ const Trip = sequelize.define('Trip', {
       key: 'id',
     },
   },
-  from_station_id: {
+  origin_station_id: {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
@@ -23,7 +23,7 @@ const Trip = sequelize.define('Trip', {
       key: 'id',
     },
   },
-  to_station_id: {
+  destination_station_id: {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
@@ -41,18 +41,15 @@ const Trip = sequelize.define('Trip', {
   },
   first_class_price: {
     type: DataTypes.DECIMAL(10, 2),
-    allowNull: false,
+    allowNull: true,
   },
   second_class_price: {
     type: DataTypes.DECIMAL(10, 2),
+    allowNull: true,
+  },
+  available_seats: {
+    type: DataTypes.INTEGER,
     allowNull: false,
-  },
-  available_first_class_seats: {
-    type: DataTypes.INTEGER,
-    defaultValue: 0,
-  },
-  available_second_class_seats: {
-    type: DataTypes.INTEGER,
     defaultValue: 0,
   },
   status: {

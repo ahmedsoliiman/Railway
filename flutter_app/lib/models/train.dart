@@ -1,3 +1,5 @@
+import 'carriage.dart';
+
 class Train {
   final int id;
   final String trainNumber;
@@ -8,6 +10,7 @@ class Train {
   final int secondClassSeats;
   final String? facilities;
   final String status; // active, maintenance, retired
+  final List<TrainCarriage>? carriages;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -21,23 +24,34 @@ class Train {
     required this.secondClassSeats,
     this.facilities,
     required this.status,
+    this.carriages,
     this.createdAt,
     this.updatedAt,
   });
 
   factory Train.fromJson(Map<String, dynamic> json) {
+    List<TrainCarriage>? carriages;
+    if (json['carriages'] != null && json['carriages'] is List) {
+      carriages = (json['carriages'] as List)
+          .map((c) => TrainCarriage.fromJson(c))
+          .toList();
+    }
+
     return Train(
       id: json['id'] ?? 0,
-      trainNumber: json['train_number'] ?? '',
+      trainNumber: json['trainNumber'] ?? json['train_number'] ?? '',
       name: json['name'] ?? '',
       type: json['type'] ?? 'Standard',
-      totalSeats: json['total_seats'] ?? 0,
-      firstClassSeats: json['first_class_seats'] ?? 0,
-      secondClassSeats: json['second_class_seats'] ?? 0,
+      totalSeats: json['totalSeats'] ?? json['total_seats'] ?? 0,
+      firstClassSeats: json['firstClassSeats'] ?? json['first_class_seats'] ?? 0,
+      secondClassSeats: json['secondClassSeats'] ?? json['second_class_seats'] ?? 0,
       facilities: json['facilities'],
       status: json['status'] ?? 'active',
-      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : null,
-      updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : null,
+      carriages: carriages,
+      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : 
+                 (json['created_at'] != null ? DateTime.parse(json['created_at']) : null),
+      updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) :
+                 (json['updated_at'] != null ? DateTime.parse(json['updated_at']) : null),
     );
   }
 

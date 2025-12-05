@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/station.dart';
 import '../models/train.dart';
-import '../models/tour.dart';
+import '../models/trip.dart';
+import '../models/carriage.dart';
 import '../services/admin_service.dart';
 
 class AdminProvider with ChangeNotifier {
@@ -15,24 +16,30 @@ class AdminProvider with ChangeNotifier {
   List<Station> _stations = [];
   List<Station> get stations => _stations;
 
+  // Carriages
+  List<Carriage> _carriages = [];
+  List<Carriage> get carriages => _carriages;
+
   // Trains
   List<Train> _trains = [];
   List<Train> get trains => _trains;
 
-  // Tours
-  List<Tour> _tours = [];
-  List<Tour> get tours => _tours;
+  // Trips
+  List<Trip> _trips = [];
+  List<Trip> get trips => _trips;
 
   // Loading states
   bool _isLoadingStats = false;
   bool _isLoadingStations = false;
+  bool _isLoadingCarriages = false;
   bool _isLoadingTrains = false;
-  bool _isLoadingTours = false;
+  bool _isLoadingTrips = false;
 
   bool get isLoadingStats => _isLoadingStats;
   bool get isLoadingStations => _isLoadingStations;
+  bool get isLoadingCarriages => _isLoadingCarriages;
   bool get isLoadingTrains => _isLoadingTrains;
-  bool get isLoadingTours => _isLoadingTours;
+  bool get isLoadingTrips => _isLoadingTrips;
 
   String? _error;
   String? get error => _error;
@@ -138,6 +145,83 @@ class AdminProvider with ChangeNotifier {
     return response;
   }
 
+  // ============ CARRIAGES MANAGEMENT ============
+
+  Future<void> loadCarriages() async {
+    _isLoadingCarriages = true;
+    _error = null;
+    notifyListeners();
+
+    final response = await _adminService.getCarriages();
+
+    _isLoadingCarriages = false;
+
+    if (response['success']) {
+      _carriages = response['data'];
+    } else {
+      _error = response['message'];
+    }
+
+    notifyListeners();
+  }
+
+  Future<Map<String, dynamic>> createCarriage({
+    required String name,
+    required String classType,
+    required int seatsCount,
+    String? model,
+    String? description,
+  }) async {
+    final response = await _adminService.createCarriage(
+      name: name,
+      classType: classType,
+      seatsCount: seatsCount,
+      model: model,
+      description: description,
+    );
+
+    if (response['success']) {
+      await loadCarriages(); // Reload list
+    }
+
+    return response;
+  }
+
+  Future<Map<String, dynamic>> updateCarriage({
+    required int id,
+    String? name,
+    String? classType,
+    int? seatsCount,
+    String? model,
+    String? description,
+  }) async {
+    final response = await _adminService.updateCarriage(
+      id: id,
+      name: name,
+      classType: classType,
+      seatsCount: seatsCount,
+      model: model,
+      description: description,
+    );
+
+    if (response['success']) {
+      await loadCarriages(); // Reload list
+    }
+
+    return response;
+  }
+
+  Future<Map<String, dynamic>> deleteCarriage(int id) async {
+    final response = await _adminService.deleteCarriage(id);
+
+    if (response['success']) {
+      _carriages.removeWhere((c) => c.id == id);
+      notifyListeners();
+    }
+
+    return response;
+  }
+
   // ============ TRAINS MANAGEMENT ============
 
   Future<void> loadTrains() async {
@@ -162,9 +246,7 @@ class AdminProvider with ChangeNotifier {
     required String trainNumber,
     required String name,
     required String type,
-    required int totalSeats,
-    required int firstClassSeats,
-    required int secondClassSeats,
+    required List<Map<String, dynamic>> carriages,
     String? facilities,
     String? status,
   }) async {
@@ -172,9 +254,7 @@ class AdminProvider with ChangeNotifier {
       trainNumber: trainNumber,
       name: name,
       type: type,
-      totalSeats: totalSeats,
-      firstClassSeats: firstClassSeats,
-      secondClassSeats: secondClassSeats,
+      carriages: carriages,
       facilities: facilities,
       status: status,
     );
@@ -191,9 +271,7 @@ class AdminProvider with ChangeNotifier {
     String? trainNumber,
     String? name,
     String? type,
-    int? totalSeats,
-    int? firstClassSeats,
-    int? secondClassSeats,
+    List<Map<String, dynamic>>? carriages,
     String? facilities,
     String? status,
   }) async {
@@ -202,9 +280,7 @@ class AdminProvider with ChangeNotifier {
       trainNumber: trainNumber,
       name: name,
       type: type,
-      totalSeats: totalSeats,
-      firstClassSeats: firstClassSeats,
-      secondClassSeats: secondClassSeats,
+      carriages: carriages,
       facilities: facilities,
       status: status,
     );
@@ -227,19 +303,19 @@ class AdminProvider with ChangeNotifier {
     return response;
   }
 
-  // ============ TOURS MANAGEMENT ============
+  // ============ TRIPS MANAGEMENT ============
 
-  Future<void> loadTours() async {
-    _isLoadingTours = true;
+  Future<void> loadTrips() async {
+    _isLoadingTrips = true;
     _error = null;
     notifyListeners();
 
-    final response = await _adminService.getTours();
+    final response = await _adminService.getTrips();
 
-    _isLoadingTours = false;
+    _isLoadingTrips = false;
 
     if (response['success']) {
-      _tours = response['data'];
+      _trips = response['data'];
     } else {
       _error = response['message'];
     }
@@ -247,7 +323,7 @@ class AdminProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<Map<String, dynamic>> createTour({
+  Future<Map<String, dynamic>> createTrip({
     required int trainId,
     required int originStationId,
     required int destinationStationId,
@@ -258,7 +334,7 @@ class AdminProvider with ChangeNotifier {
     required int availableSeats,
     String? status,
   }) async {
-    final response = await _adminService.createTour(
+    final response = await _adminService.createTrip(
       trainId: trainId,
       originStationId: originStationId,
       destinationStationId: destinationStationId,
@@ -271,13 +347,13 @@ class AdminProvider with ChangeNotifier {
     );
 
     if (response['success']) {
-      await loadTours(); // Reload list
+      await loadTrips(); // Reload list
     }
 
     return response;
   }
 
-  Future<Map<String, dynamic>> updateTour({
+  Future<Map<String, dynamic>> updateTrip({
     required int id,
     int? trainId,
     int? originStationId,
@@ -289,7 +365,7 @@ class AdminProvider with ChangeNotifier {
     int? availableSeats,
     String? status,
   }) async {
-    final response = await _adminService.updateTour(
+    final response = await _adminService.updateTrip(
       id: id,
       trainId: trainId,
       originStationId: originStationId,
@@ -303,17 +379,17 @@ class AdminProvider with ChangeNotifier {
     );
 
     if (response['success']) {
-      await loadTours(); // Reload list
+      await loadTrips(); // Reload list
     }
 
     return response;
   }
 
-  Future<Map<String, dynamic>> deleteTour(int id) async {
-    final response = await _adminService.deleteTour(id);
+  Future<Map<String, dynamic>> deleteTrip(int id) async {
+    final response = await _adminService.deleteTrip(id);
 
     if (response['success']) {
-      _tours.removeWhere((t) => t.id == id);
+      _trips.removeWhere((t) => t.id == id);
       notifyListeners();
     }
 

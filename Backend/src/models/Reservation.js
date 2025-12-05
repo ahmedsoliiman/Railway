@@ -25,23 +25,19 @@ const Reservation = sequelize.define('Reservation', {
     },
     onDelete: 'CASCADE',
   },
-  passenger_name: {
-    type: DataTypes.STRING(100),
-    allowNull: false,
-  },
-  passenger_national_id: {
-    type: DataTypes.STRING(50),
-    allowNull: false,
-  },
   seat_class: {
-    type: DataTypes.ENUM('first', 'second'),
+    type: DataTypes.STRING(20),
     allowNull: false,
   },
   seat_number: {
     type: DataTypes.STRING(10),
     allowNull: true,
   },
-  price: {
+  number_of_seats: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+  total_price: {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: false,
   },
@@ -50,13 +46,9 @@ const Reservation = sequelize.define('Reservation', {
     allowNull: false,
     unique: true,
   },
-  payment_status: {
-    type: DataTypes.ENUM('pending', 'completed', 'refunded'),
-    defaultValue: 'completed',
-  },
   status: {
-    type: DataTypes.ENUM('confirmed', 'cancelled'),
-    defaultValue: 'confirmed',
+    type: DataTypes.STRING(20),
+    defaultValue: 'pending',
   },
   created_at: {
     type: DataTypes.DATE,

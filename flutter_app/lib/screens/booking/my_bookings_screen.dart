@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../config/theme.dart';
-import '../../providers/tour_provider.dart';
+import '../../providers/trip_provider.dart';
 
 class MyBookingsScreen extends StatefulWidget {
   const MyBookingsScreen({super.key});
@@ -22,8 +22,8 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> with SingleTickerPr
   }
 
   Future<void> _loadBookings() async {
-    final tourProvider = Provider.of<TourProvider>(context, listen: false);
-    await tourProvider.loadReservations();
+    final tripProvider = Provider.of<TripProvider>(context, listen: false);
+    await tripProvider.loadReservations();
   }
 
   Future<void> _cancelBooking(int reservationId) async {
@@ -48,8 +48,8 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> with SingleTickerPr
 
     if (confirmed != true) return;
 
-    final tourProvider = Provider.of<TourProvider>(context, listen: false);
-    final response = await tourProvider.cancelReservation(reservationId);
+    final tripProvider = Provider.of<TripProvider>(context, listen: false);
+    final response = await tripProvider.cancelReservation(reservationId);
 
     if (!mounted) return;
 
@@ -80,17 +80,17 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> with SingleTickerPr
           ],
         ),
       ),
-      body: Consumer<TourProvider>(
-        builder: (context, tourProvider, child) {
-          if (tourProvider.isLoading) {
+      body: Consumer<TripProvider>(
+        builder: (context, tripProvider, child) {
+          if (tripProvider.isLoading) {
             return const Center(child: CircularProgressIndicator());
           }
 
           return TabBarView(
             controller: _tabController,
             children: [
-              _buildBookingsList(tourProvider.upcomingReservations, true),
-              _buildBookingsList(tourProvider.pastReservations, false),
+              _buildBookingsList(tripProvider.upcomingReservations, true),
+              _buildBookingsList(tripProvider.pastReservations, false),
             ],
           );
         },

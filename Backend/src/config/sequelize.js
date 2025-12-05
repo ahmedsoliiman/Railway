@@ -19,11 +19,18 @@ const sequelize = new Sequelize(
   }
 );
 
-// Test connection
+// Test connection and optionally sync models
 const testConnection = async () => {
   try {
     await sequelize.authenticate();
     console.log('✅ Sequelize: Database connection established successfully');
+    
+    // Auto-sync tables in development (creates tables if they don't exist)
+    // WARNING: Set ALTER to false in production!
+    if (process.env.AUTO_SYNC === 'true') {
+      await sequelize.sync({ alter: false }); // alter: false = don't modify existing tables
+      console.log('✅ Sequelize: All models synchronized with database');
+    }
   } catch (error) {
     console.error('❌ Sequelize: Unable to connect to database:', error);
     process.exit(-1);

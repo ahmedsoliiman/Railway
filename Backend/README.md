@@ -34,24 +34,39 @@ npm install
 ```
 
 2. Configure environment variables:
-   - Copy `.env.example` to `.env`
-   - Update database credentials (port 5433, password: testpass)
-   - Update email configuration for confirmation codes
+   - Create a `.env` file in the Backend folder
+   - Add the following configuration:
+   ```env
+   PORT=3001
+   NODE_ENV=development
+   
+   DB_HOST=localhost
+   DB_PORT=5433
+   DB_NAME=train_system
+   DB_USER=postgres
+   DB_PASSWORD=your_postgres_password
+   
+   JWT_SECRET=your_secret_key_here
+   JWT_EXPIRE=7d
+   
+   EMAIL_HOST=smtp.gmail.com
+   EMAIL_PORT=587
+   EMAIL_USER=your_email@gmail.com
+   EMAIL_PASSWORD=your_app_password
+   EMAIL_FROM=Train Booking System <your_email@gmail.com>
+   ```
 
-3. Create database:
+3. **Setup Database (Automatic):**
 ```bash
-# Connect to PostgreSQL and create database
-psql -U postgres -p 5433
-CREATE DATABASE train_system;
-\q
+node setup-database.js
 ```
+   This will automatically:
+   - Create the `train_system` database
+   - Create all tables with proper schema
+   - Insert sample data (stations, trains, carriages, trips)
+   - Create default admin user
 
-4. Run database migrations:
-```bash
-npm run migrate
-```
-
-5. Start the server:
+4. Start the server:
 ```bash
 # Development mode
 npm run dev

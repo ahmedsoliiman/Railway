@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../config/theme.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/tour_provider.dart';
+import '../../providers/trip_provider.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -24,8 +24,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadData() async {
-    final tourProvider = Provider.of<TourProvider>(context, listen: false);
-    await tourProvider.searchTours();
+    final tripProvider = Provider.of<TripProvider>(context, listen: false);
+    await tripProvider.searchTrips();
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -40,16 +40,16 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _searchTours() async {
-    final tourProvider = Provider.of<TourProvider>(context, listen: false);
+  Future<void> _searchTrips() async {
+    final tripProvider = Provider.of<TripProvider>(context, listen: false);
     
-    await tourProvider.loadTours(
+    await tripProvider.loadTrips(
       date: _selectedDate,
       trainType: _selectedTrainType,
     );
     
     if (mounted) {
-      Navigator.pushNamed(context, '/tours');
+      Navigator.pushNamed(context, '/trips');
     }
   }
 
@@ -186,7 +186,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton.icon(
-                            onPressed: _searchTours,
+                            onPressed: _searchTrips,
                             icon: const Icon(Icons.search),
                             label: const Text('Search Trains'),
                           ),
@@ -222,9 +222,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         Expanded(
                           child: _QuickActionCard(
                             icon: Icons.train_outlined,
-                            title: 'All Tours',
+                            title: 'All Trips',
                             color: AppTheme.successColor,
-                            onTap: () => Navigator.pushNamed(context, '/tours'),
+                            onTap: () => Navigator.pushNamed(context, '/trips'),
                           ),
                         ),
                       ],

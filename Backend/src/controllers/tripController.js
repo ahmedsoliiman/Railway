@@ -23,8 +23,8 @@ exports.getAllTrips = async (req, res) => {
     }
 
     // Filter by stations
-    if (from_station) where.from_station_id = from_station;
-    if (to_station) where.to_station_id = to_station;
+    if (from_station) where.origin_station_id = from_station;
+    if (to_station) where.destination_station_id = to_station;
 
     // Only show scheduled trips with future departure
     where.status = 'scheduled';
@@ -238,25 +238,24 @@ exports.getAllTripsAdmin = async (req, res) => {
 // @access  Private/Admin
 exports.createTrip = async (req, res) => {
   try {
-    const {
-      train_id,
-      from_station_id,
-      to_station_id,
-      departure_time,
-      arrival_time,
-      first_class_price,
-      second_class_price,
-    } = req.body;
+    // Accept both camelCase (frontend) and snake_case (API)
+    const train_id = req.body.train_id || req.body.trainId;
+    const origin_station_id = req.body.origin_station_id || req.body.originStationId;
+    const destination_station_id = req.body.destination_station_id || req.body.destinationStationId;
+    const departure_time = req.body.departure_time || req.body.departureTime;
+    const arrival_time = req.body.arrival_time || req.body.arrivalTime;
+    const first_class_price = req.body.first_class_price || req.body.firstClassPrice;
+    const second_class_price = req.body.second_class_price || req.body.secondClassPrice;
 
     // Validation
-    if (!train_id || !from_station_id || !to_station_id || !departure_time || !arrival_time || !first_class_price || !second_class_price) {
+    if (!train_id || !origin_station_id || !destination_station_id || !departure_time || !arrival_time || !first_class_price || !second_class_price) {
       return res.status(400).json({
         success: false,
         message: 'Please provide all required fields',
       });
     }
 
-    if (from_station_id === to_station_id) {
+    if (origin_station_id === destination_station_id) {
       return res.status(400).json({
         success: false,
         message: 'Departure and arrival stations must be different',
@@ -273,8 +272,8 @@ exports.createTrip = async (req, res) => {
     }
 
     // Verify stations exist
-    const fromStation = await Station.findByPk(from_station_id);
-    const toStation = await Station.findByPk(to_station_id);
+    const fromStation = await Station.findByPk(origin_station_id);
+    const toStation = await Station.findByPk(destination_station_id);
     if (!fromStation || !toStation) {
       return res.status(404).json({
         success: false,
@@ -285,8 +284,8 @@ exports.createTrip = async (req, res) => {
     // Create trip
     const trip = await Trip.create({
       train_id,
-      from_station_id,
-      to_station_id,
+      origin_station_id,
+      destination_station_id,
       departure_time,
       arrival_time,
       first_class_price,
@@ -303,8 +302,8 @@ exports.createTrip = async (req, res) => {
         trip: {
           id: trip.id,
           trainId: trip.train_id,
-          fromStationId: trip.from_station_id,
-          toStationId: trip.to_station_id,
+          fromStationId: trip.origin_station_id,
+          toStationId: trip.destination_station_id,
           departureTime: trip.departure_time,
           arrivalTime: trip.arrival_time,
           firstClassPrice: parseFloat(trip.first_class_price),
@@ -330,16 +329,15 @@ exports.createTrip = async (req, res) => {
 exports.updateTrip = async (req, res) => {
   try {
     const { id } = req.params;
-    const {
-      train_id,
-      from_station_id,
-      to_station_id,
-      departure_time,
-      arrival_time,
-      first_class_price,
-      second_class_price,
-      status,
-    } = req.body;
+    // Accept both camelCase (frontend) and snake_case (API)
+    const train_id = req.body.train_id || req.body.trainId;
+    const origin_station_id = req.body.origin_station_id || req.body.originStationId;
+    const destination_station_id = req.body.destination_station_id || req.body.destinationStationId;
+    const departure_time = req.body.departure_time || req.body.departureTime;
+    const arrival_time = req.body.arrival_time || req.body.arrivalTime;
+    const first_class_price = req.body.first_class_price || req.body.firstClassPrice;
+    const second_class_price = req.body.second_class_price || req.body.secondClassPrice;
+    const status = req.body.status;
 
     const trip = await Trip.findByPk(id);
     if (!trip) {
@@ -350,7 +348,7 @@ exports.updateTrip = async (req, res) => {
     }
 
     // Validate stations if provided
-    if (from_station_id && to_station_id && from_station_id === to_station_id) {
+    if (origin_station_id && destination_station_id && origin_station_id === destination_station_id) {
       return res.status(400).json({
         success: false,
         message: 'Departure and arrival stations must be different',
@@ -359,8 +357,8 @@ exports.updateTrip = async (req, res) => {
 
     await trip.update({
       train_id: train_id || trip.train_id,
-      from_station_id: from_station_id || trip.from_station_id,
-      to_station_id: to_station_id || trip.to_station_id,
+      origin_station_id: origin_station_id || trip.origin_station_id,
+      destination_station_id: destination_station_id || trip.destination_station_id,
       departure_time: departure_time || trip.departure_time,
       arrival_time: arrival_time || trip.arrival_time,
       first_class_price: first_class_price !== undefined ? first_class_price : trip.first_class_price,
@@ -376,8 +374,8 @@ exports.updateTrip = async (req, res) => {
         trip: {
           id: trip.id,
           trainId: trip.train_id,
-          fromStationId: trip.from_station_id,
-          toStationId: trip.to_station_id,
+          fromStationId: trip.origin_station_id,
+          toStationId: trip.destination_station_id,
           departureTime: trip.departure_time,
           arrivalTime: trip.arrival_time,
           firstClassPrice: parseFloat(trip.first_class_price),

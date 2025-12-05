@@ -85,11 +85,13 @@ router.post(
   '/carriages',
   [
     body('name').trim().notEmpty().withMessage('Carriage name is required'),
-    body('classType')
-      .isIn(['first', 'second', 'economic'])
+    body('classType').optional().isIn(['first', 'second', 'economic'])
       .withMessage('Class type must be first, second, or economic'),
-    body('seatsCount')
-      .isInt({ min: 1 })
+    body('class_type').optional().isIn(['first', 'second', 'economic'])
+      .withMessage('Class type must be first, second, or economic'),
+    body('seatsCount').optional().isInt({ min: 1 })
+      .withMessage('Seats count must be at least 1'),
+    body('seats_count').optional().isInt({ min: 1 })
       .withMessage('Seats count must be at least 1'),
     body('model').optional().trim(),
     body('description').optional().trim(),

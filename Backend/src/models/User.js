@@ -19,35 +19,23 @@ const User = sequelize.define('User', {
       isEmail: true,
     },
   },
-  password_hash: {
+  password: {
     type: DataTypes.STRING(255),
     allowNull: false,
+    field: 'password', // Map to 'password' column in DB
   },
-  date_of_birth: {
-    type: DataTypes.DATEONLY,
+  phone: {
+    type: DataTypes.STRING(20),
     allowNull: true,
-  },
-  national_id: {
-    type: DataTypes.STRING(50),
-    allowNull: true,
-    unique: true,
   },
   role: {
-    type: DataTypes.ENUM('user', 'admin'),
+    type: DataTypes.STRING(20),
     defaultValue: 'user',
     allowNull: false,
   },
   is_verified: {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
-  },
-  verification_token: {
-    type: DataTypes.STRING(255),
-    allowNull: true,
-  },
-  verification_token_expires: {
-    type: DataTypes.DATE,
-    allowNull: true,
   },
   created_at: {
     type: DataTypes.DATE,

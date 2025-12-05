@@ -40,27 +40,45 @@ exports.getAllCarriages = async (req, res) => {
 // @access  Private/Admin
 exports.createCarriage = async (req, res) => {
   try {
-    const { name, class_type, seats_count, model, description } = req.body;
+    console.log('Create carriage request body:', req.body);
+    // Accept both camelCase (frontend) and snake_case (API)
+    const name = req.body.name;
+    const class_type = req.body.class_type || req.body.classType;
+    const seats_count = req.body.seats_count || req.body.seatsCount;
+    const model = req.body.model;
+    const description = req.body.description;
 
     // Validation
     if (!name || !class_type || !seats_count) {
+      console.log('Validation failed:', { name, class_type, seats_count });
       return res.status(400).json({
         success: false,
-        message: 'Please provide name, class_type, and seats_count',
+        message: 'Validation failed',
+        errors: [
+          !name && { field: 'name', message: 'Name is required' },
+          !class_type && { field: 'classType', message: 'Class type is required' },
+          !seats_count && { field: 'seatsCount', message: 'Seats count is required' },
+        ].filter(Boolean),
       });
     }
 
     if (!['first', 'second', 'economic'].includes(class_type)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid class_type. Must be first, second, or economic',
+        message: 'Validation failed',
+        errors: [
+          { field: 'classType', message: 'Class type must be first, second, or economic' },
+        ],
       });
     }
 
     if (seats_count < 1) {
       return res.status(400).json({
         success: false,
-        message: 'Seats count must be at least 1',
+        message: 'Validation failed',
+        errors: [
+          { field: 'seatsCount', message: 'Seats count must be at least 1' },
+        ],
       });
     }
 
@@ -101,7 +119,12 @@ exports.createCarriage = async (req, res) => {
 exports.updateCarriage = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, class_type, seats_count, model, description } = req.body;
+    // Accept both camelCase (frontend) and snake_case (API)
+    const name = req.body.name;
+    const class_type = req.body.class_type || req.body.classType;
+    const seats_count = req.body.seats_count || req.body.seatsCount;
+    const model = req.body.model;
+    const description = req.body.description;
 
     const carriage = await Carriage.findByPk(id);
     if (!carriage) {
@@ -115,7 +138,10 @@ exports.updateCarriage = async (req, res) => {
     if (class_type && !['first', 'second', 'economic'].includes(class_type)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid class_type. Must be first, second, or economic',
+        message: 'Validation failed',
+        errors: [
+          { field: 'classType', message: 'Class type must be first, second, or economic' },
+        ],
       });
     }
 
@@ -123,7 +149,10 @@ exports.updateCarriage = async (req, res) => {
     if (seats_count !== undefined && seats_count < 1) {
       return res.status(400).json({
         success: false,
-        message: 'Seats count must be at least 1',
+        message: 'Validation failed',
+        errors: [
+          { field: 'seatsCount', message: 'Seats count must be at least 1' },
+        ],
       });
     }
 

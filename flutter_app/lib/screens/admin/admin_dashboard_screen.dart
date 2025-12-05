@@ -5,8 +5,9 @@ import '../../providers/auth_provider.dart';
 import '../../providers/admin_provider.dart';
 import '../../config/theme.dart';
 import '../../models/station.dart';
+import '../../models/carriage.dart';
 import '../../models/train.dart';
-import '../../models/tour.dart';
+import '../../models/trip.dart';
 import '../../widgets/enhanced_dialog.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
@@ -27,14 +28,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       final adminProvider = Provider.of<AdminProvider>(context, listen: false);
       adminProvider.loadDashboardStats();
       adminProvider.loadStations();
+      adminProvider.loadCarriages();
       adminProvider.loadTrains();
-      adminProvider.loadTours();
+      adminProvider.loadTrips();
     });
   }
 
   final List<Widget> _pages = [
     const AdminOverviewPage(),
     const AdminStationsPage(),
+    const AdminCarriagesPage(),
     const AdminTrainsPage(),
     const AdminTripsPage(),
     const AdminUsersPage(),
@@ -129,6 +132,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 label: Text('Stations'),
               ),
               NavigationRailDestination(
+                icon: Icon(Icons.view_carousel_outlined),
+                selectedIcon: Icon(Icons.view_carousel),
+                label: Text('Carriages'),
+              ),
+              NavigationRailDestination(
                 icon: Icon(Icons.train_outlined),
                 selectedIcon: Icon(Icons.train),
                 label: Text('Trains'),
@@ -209,9 +217,9 @@ class AdminOverviewPage extends StatelessWidget {
                     ),
                     _buildStatCard(
                       context,
-                      'Active Tours',
-                      '${stats?['active_tours'] ?? 0}',
-                      Icons.tour,
+                      'Active Trips',
+                      '${stats?['active_trips'] ?? 0}',
+                      Icons.route,
                       Colors.green,
                     ),
                     _buildStatCard(
@@ -507,6 +515,310 @@ class AdminStationsPage extends StatelessWidget {
   }
 }
 
+// Carriages Management Page
+class AdminCarriagesPage extends StatelessWidget {
+  const AdminCarriagesPage({super.key});
+
+  void _showCarriageDialog(BuildContext context, {Carriage? carriage}) {
+    final nameController = TextEditingController(text: carriage?.name);
+    final seatsCountController = TextEditingController(text: carriage?.seatsCount.toString());
+    final modelController = TextEditingController(text: carriage?.model);
+    final descriptionController = TextEditingController(text: carriage?.description);
+    
+    String selectedClassType = carriage?.classType ?? 'first';
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => EnhancedDialog(
+          title: carriage == null ? 'Add New Carriage' : 'Edit Carriage',
+          subtitle: carriage == null ? 'Fill in carriage details' : 'Update carriage information',
+          icon: Icons.view_carousel,
+          content: SingleChildScrollView(
+            child: SizedBox(
+              width: 500,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Carriage Name *',
+                      border: OutlineInputBorder(),
+                      hintText: 'e.g., First Class A1',
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    value: selectedClassType,
+                    decoration: const InputDecoration(
+                      labelText: 'Class Type *',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'first', child: Text('First Class')),
+                      DropdownMenuItem(value: 'second', child: Text('Second Class')),
+                      DropdownMenuItem(value: 'economic', child: Text('Economic Class')),
+                    ],
+                    onChanged: (value) {
+                      setState(() {
+                        selectedClassType = value!;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: seatsCountController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Number of Seats *',
+                      border: OutlineInputBorder(),
+                      hintText: 'e.g., 40',
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: modelController,
+                    decoration: const InputDecoration(
+                      labelText: 'Model',
+                      border: OutlineInputBorder(),
+                      hintText: 'e.g., Modern Luxury',
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: descriptionController,
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                      labelText: 'Description',
+                      border: OutlineInputBorder(),
+                      hintText: 'Optional description...',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (nameController.text.isEmpty || seatsCountController.text.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please fill all required fields')),
+                  );
+                  return;
+                }
+
+                final adminProvider = Provider.of<AdminProvider>(context, listen: false);
+                final result = carriage == null
+                    ? await adminProvider.createCarriage(
+                        name: nameController.text,
+                        classType: selectedClassType,
+                        seatsCount: int.parse(seatsCountController.text),
+                        model: modelController.text.isEmpty ? null : modelController.text,
+                        description: descriptionController.text.isEmpty ? null : descriptionController.text,
+                      )
+                    : await adminProvider.updateCarriage(
+                        id: carriage.id,
+                        name: nameController.text,
+                        classType: selectedClassType,
+                        seatsCount: int.parse(seatsCountController.text),
+                        model: modelController.text.isEmpty ? null : modelController.text,
+                        description: descriptionController.text.isEmpty ? null : descriptionController.text,
+                      );
+
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(result['message']),
+                      backgroundColor: result['success'] ? Colors.green : Colors.red,
+                    ),
+                  );
+                }
+              },
+              child: Text(carriage == null ? 'Add' : 'Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Carriages Management',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              ElevatedButton.icon(
+                onPressed: () => _showCarriageDialog(context),
+                icon: const Icon(Icons.add),
+                label: const Text('Add Carriage'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Expanded(
+            child: Consumer<AdminProvider>(
+              builder: (context, adminProvider, child) {
+                if (adminProvider.isLoadingCarriages) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (adminProvider.carriages.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.view_carousel_outlined, size: 64, color: Colors.grey[400]),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No carriages found',
+                          style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+                        ),
+                        const SizedBox(height: 8),
+                        ElevatedButton(
+                          onPressed: () => _showCarriageDialog(context),
+                          child: const Text('Add First Carriage'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return Card(
+                  elevation: 2,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: DataTable(
+                      headingRowColor: WidgetStateProperty.all(Colors.grey[100]),
+                      columns: const [
+                        DataColumn(label: Text('ID', style: TextStyle(fontWeight: FontWeight.bold))),
+                        DataColumn(label: Text('Name', style: TextStyle(fontWeight: FontWeight.bold))),
+                        DataColumn(label: Text('Class Type', style: TextStyle(fontWeight: FontWeight.bold))),
+                        DataColumn(label: Text('Seats', style: TextStyle(fontWeight: FontWeight.bold))),
+                        DataColumn(label: Text('Model', style: TextStyle(fontWeight: FontWeight.bold))),
+                        DataColumn(label: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold))),
+                      ],
+                      rows: adminProvider.carriages.map((carriage) {
+                        Color classColor;
+                        switch (carriage.classType) {
+                          case 'first':
+                            classColor = Colors.purple;
+                            break;
+                          case 'second':
+                            classColor = Colors.blue;
+                            break;
+                          case 'economic':
+                            classColor = Colors.green;
+                            break;
+                          default:
+                            classColor = Colors.grey;
+                        }
+
+                        return DataRow(cells: [
+                          DataCell(Text(carriage.id.toString())),
+                          DataCell(Text(carriage.name)),
+                          DataCell(
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: classColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: classColor),
+                              ),
+                              child: Text(
+                                carriage.classTypeDisplay,
+                                style: TextStyle(color: classColor, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ),
+                          DataCell(Text(carriage.seatsCount.toString())),
+                          DataCell(Text(carriage.model ?? '-')),
+                          DataCell(
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.edit, color: Colors.blue, size: 20),
+                                  onPressed: () => _showCarriageDialog(context, carriage: carriage),
+                                  tooltip: 'Edit',
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                                  onPressed: () async {
+                                    final confirm = await showDialog<bool>(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title: const Text('Delete Carriage'),
+                                        content: Text('Are you sure you want to delete "${carriage.name}"?'),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(context, false),
+                                            child: const Text('Cancel'),
+                                          ),
+                                          ElevatedButton(
+                                            onPressed: () => Navigator.pop(context, true),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: Colors.red,
+                                            ),
+                                            child: const Text('Delete'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+
+                                    if (confirm == true && context.mounted) {
+                                      final result = await adminProvider.deleteCarriage(carriage.id);
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text(result['message']),
+                                            backgroundColor: result['success'] ? Colors.green : Colors.red,
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  },
+                                  tooltip: 'Delete',
+                                ),
+                              ],
+                            ),
+                          ),
+                        ]);
+                      }).toList(),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // Trains Management Page
 class AdminTrainsPage extends StatelessWidget {
   const AdminTrainsPage({super.key});
@@ -514,13 +826,30 @@ class AdminTrainsPage extends StatelessWidget {
   void _showTrainDialog(BuildContext context, {Train? train}) {
     final trainNumberController = TextEditingController(text: train?.trainNumber);
     final nameController = TextEditingController(text: train?.name);
-    final totalSeatsController = TextEditingController(text: train?.totalSeats.toString());
-    final firstClassSeatsController = TextEditingController(text: train?.firstClassSeats.toString());
-    final secondClassSeatsController = TextEditingController(text: train?.secondClassSeats.toString());
     final facilitiesController = TextEditingController(text: train?.facilities);
     String selectedType = train?.type ?? 'Standard';
     String selectedStatus = train?.status ?? 'active';
     final formKey = GlobalKey<FormState>();
+    
+    final adminProvider = Provider.of<AdminProvider>(context, listen: false);
+    
+    // Selected carriages: Map<carriageId, quantity>
+    Map<int, int> selectedCarriages = {};
+    if (train?.carriages != null) {
+      for (var tc in train!.carriages!) {
+        selectedCarriages[tc.carriageId] = tc.quantity;
+      }
+    }
+
+    // Calculate total seats
+    int calculateTotalSeats() {
+      int total = 0;
+      for (var entry in selectedCarriages.entries) {
+        final carriage = adminProvider.carriages.firstWhere((c) => c.id == entry.key);
+        total += carriage.seatsCount * entry.value;
+      }
+      return total;
+    }
 
     showDialog(
       context: context,
@@ -565,39 +894,105 @@ class AdminTrainsPage extends StatelessWidget {
                   onChanged: (value) => setState(() => selectedType = value!),
                 ),
                 const SizedBox(height: 16),
-                EnhancedTextField(
-                  controller: totalSeatsController,
-                  label: 'Total Seats *',
-                  hint: 'Total capacity',
-                  icon: Icons.event_seat,
-                  keyboardType: TextInputType.number,
-                  validator: (v) => int.tryParse(v ?? '') == null ? 'Must be a number' : null,
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: EnhancedTextField(
-                        controller: firstClassSeatsController,
-                        label: '1st Class Seats *',
-                        hint: 'Premium',
-                        icon: Icons.airline_seat_flat,
-                        keyboardType: TextInputType.number,
-                        validator: (v) => int.tryParse(v ?? '') == null ? 'Invalid' : null,
-                      ),
+                // Carriages Section
+                Card(
+                  color: Colors.blue.shade50,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.view_carousel, size: 20),
+                            const SizedBox(width: 8),
+                            const Text('Carriages Configuration', style: TextStyle(fontWeight: FontWeight.bold)),
+                            const Spacer(),
+                            if (calculateTotalSeats() > 0)
+                              Chip(
+                                label: Text('Total: ${calculateTotalSeats()} seats'),
+                                backgroundColor: Colors.green.shade100,
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        ...selectedCarriages.entries.map((entry) {
+                          final carriage = adminProvider.carriages.firstWhere((c) => c.id == entry.key);
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8.0),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text('${carriage.name} (${carriage.seatsCount} seats each)'),
+                                ),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.remove_circle_outline, size: 20),
+                                      onPressed: () {
+                                        setState(() {
+                                          if (entry.value > 1) {
+                                            selectedCarriages[entry.key] = entry.value - 1;
+                                          } else {
+                                            selectedCarriages.remove(entry.key);
+                                          }
+                                        });
+                                      },
+                                    ),
+                                    Text('${entry.value}x'),
+                                    IconButton(
+                                      icon: const Icon(Icons.add_circle_outline, size: 20),
+                                      onPressed: () {
+                                        setState(() {
+                                          selectedCarriages[entry.key] = entry.value + 1;
+                                        });
+                                      },
+                                    ),
+                                  ],
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                                  onPressed: () {
+                                    setState(() {
+                                      selectedCarriages.remove(entry.key);
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                        if (adminProvider.carriages.where((c) => !selectedCarriages.containsKey(c.id)).isNotEmpty)
+                          DropdownButtonFormField<int>(
+                            decoration: const InputDecoration(
+                              labelText: 'Add Carriage',
+                              border: OutlineInputBorder(),
+                            ),
+                            items: adminProvider.carriages
+                                .where((c) => !selectedCarriages.containsKey(c.id))
+                                .map((c) => DropdownMenuItem(
+                                      value: c.id,
+                                      child: Text('${c.name} (${c.classTypeDisplay}, ${c.seatsCount} seats)'),
+                                    ))
+                                .toList(),
+                            onChanged: (carriageId) {
+                              if (carriageId != null) {
+                                setState(() {
+                                  selectedCarriages[carriageId] = 1;
+                                });
+                              }
+                            },
+                          ),
+                        if (selectedCarriages.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: Text('No carriages selected. Please add at least one carriage.', 
+                              style: TextStyle(color: Colors.red, fontSize: 12)),
+                          ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: EnhancedTextField(
-                        controller: secondClassSeatsController,
-                        label: '2nd Class Seats *',
-                        hint: 'Economy',
-                        icon: Icons.event_seat,
-                        keyboardType: TextInputType.number,
-                        validator: (v) => int.tryParse(v ?? '') == null ? 'Invalid' : null,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
                 const SizedBox(height: 16),
                 EnhancedTextField(
@@ -636,17 +1031,27 @@ class AdminTrainsPage extends StatelessWidget {
             ElevatedButton.icon(
               onPressed: () async {
                 if (!formKey.currentState!.validate()) return;
+                
+                if (selectedCarriages.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please add at least one carriage'), backgroundColor: Colors.red),
+                  );
+                  return;
+                }
 
                 final adminProvider = Provider.of<AdminProvider>(context, listen: false);
+                
+                // Convert selectedCarriages to API format
+                final carriages = selectedCarriages.entries
+                    .map((e) => {'carriage_id': e.key, 'quantity': e.value})
+                    .toList();
                 
                 final response = train == null
                     ? await adminProvider.createTrain(
                         trainNumber: trainNumberController.text,
                         name: nameController.text,
                         type: selectedType,
-                        totalSeats: int.parse(totalSeatsController.text),
-                        firstClassSeats: int.parse(firstClassSeatsController.text),
-                        secondClassSeats: int.parse(secondClassSeatsController.text),
+                        carriages: carriages,
                         facilities: facilitiesController.text.isEmpty ? null : facilitiesController.text,
                         status: selectedStatus,
                       )
@@ -655,9 +1060,7 @@ class AdminTrainsPage extends StatelessWidget {
                         trainNumber: trainNumberController.text,
                         name: nameController.text,
                         type: selectedType,
-                        totalSeats: int.parse(totalSeatsController.text),
-                        firstClassSeats: int.parse(firstClassSeatsController.text),
-                        secondClassSeats: int.parse(secondClassSeatsController.text),
+                        carriages: carriages,
                         facilities: facilitiesController.text.isEmpty ? null : facilitiesController.text,
                         status: selectedStatus,
                       );
@@ -803,23 +1206,23 @@ class AdminTrainsPage extends StatelessWidget {
 class AdminTripsPage extends StatelessWidget {
   const AdminTripsPage({super.key});
 
-  void _showTripDialog(BuildContext context, AdminProvider adminProvider, {Tour? tour}) {
-    final firstClassPriceController = TextEditingController(text: tour?.firstClassPrice?.toString());
-    final secondClassPriceController = TextEditingController(text: tour?.secondClassPrice?.toString());
-    final availableSeatsController = TextEditingController(text: tour?.availableSeats.toString());
-    int? selectedTrainId = tour?.trainId;
-    int? selectedOriginId = tour?.originStationId;
-    int? selectedDestinationId = tour?.destinationStationId;
-    DateTime departureTime = tour?.departureTime ?? DateTime.now().add(const Duration(days: 1));
-    DateTime arrivalTime = tour?.arrivalTime ?? DateTime.now().add(const Duration(days: 1, hours: 4));
-    String selectedStatus = tour?.status ?? 'scheduled';
+  void _showTripDialog(BuildContext context, AdminProvider adminProvider, {Trip? trip}) {
+    final firstClassPriceController = TextEditingController(text: trip?.firstClassPrice?.toString());
+    final secondClassPriceController = TextEditingController(text: trip?.secondClassPrice?.toString());
+    final availableSeatsController = TextEditingController(text: trip?.availableSeats.toString());
+    int? selectedTrainId = trip?.trainId;
+    int? selectedOriginId = trip?.originStationId;
+    int? selectedDestinationId = trip?.destinationStationId;
+    DateTime departureTime = trip?.departureTime ?? DateTime.now().add(const Duration(days: 1));
+    DateTime arrivalTime = trip?.arrivalTime ?? DateTime.now().add(const Duration(days: 1, hours: 4));
+    String selectedStatus = trip?.status ?? 'scheduled';
     final formKey = GlobalKey<FormState>();
 
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: Text(tour == null ? 'Add Trip' : 'Edit Trip'),
+          title: Text(trip == null ? 'Add Trip' : 'Edit Trip'),
           content: Form(
             key: formKey,
             child: SingleChildScrollView(
@@ -949,8 +1352,8 @@ class AdminTripsPage extends StatelessWidget {
               onPressed: () async {
                 if (!formKey.currentState!.validate()) return;
 
-                final response = tour == null
-                    ? await adminProvider.createTour(
+                final response = trip == null
+                    ? await adminProvider.createTrip(
                         trainId: selectedTrainId!,
                         originStationId: selectedOriginId!,
                         destinationStationId: selectedDestinationId!,
@@ -961,8 +1364,8 @@ class AdminTripsPage extends StatelessWidget {
                         availableSeats: int.parse(availableSeatsController.text),
                         status: selectedStatus,
                       )
-                    : await adminProvider.updateTour(
-                        id: tour.id,
+                    : await adminProvider.updateTrip(
+                        id: trip.id,
                         trainId: selectedTrainId,
                         originStationId: selectedOriginId,
                         destinationStationId: selectedDestinationId,
@@ -981,7 +1384,7 @@ class AdminTripsPage extends StatelessWidget {
                   );
                 }
               },
-              child: Text(tour == null ? 'Add' : 'Update'),
+              child: Text(trip == null ? 'Add' : 'Update'),
             ),
           ],
         ),
@@ -1016,9 +1419,9 @@ class AdminTripsPage extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               Expanded(
-                child: adminProvider.isLoadingTours
+                child: adminProvider.isLoadingTrips
                     ? const Center(child: CircularProgressIndicator())
-                    : adminProvider.tours.isEmpty
+                    : adminProvider.trips.isEmpty
                         ? const Center(child: Text('No trips yet'))
                         : Card(
                             child: SingleChildScrollView(
@@ -1034,21 +1437,21 @@ class AdminTripsPage extends StatelessWidget {
                                   DataColumn(label: Text('Status')),
                                   DataColumn(label: Text('Actions')),
                                 ],
-                                rows: adminProvider.tours.map((tour) {
+                                rows: adminProvider.trips.map((trip) {
                                   return DataRow(cells: [
-                                    DataCell(Text(tour.trainName)),
-                                    DataCell(Text('${tour.originCity} → ${tour.destinationCity}')),
-                                    DataCell(Text(DateFormat('MMM dd, HH:mm').format(tour.departureTime))),
-                                    DataCell(Text('\$${tour.firstClassPrice?.toStringAsFixed(2)}')),
-                                    DataCell(Text('\$${tour.secondClassPrice?.toStringAsFixed(2)}')),
-                                    DataCell(Text('${tour.availableSeats}')),
-                                    DataCell(Text(tour.status.toUpperCase())),
+                                    DataCell(Text(trip.trainName)),
+                                    DataCell(Text('${trip.originCity} → ${trip.destinationCity}')),
+                                    DataCell(Text(DateFormat('MMM dd, HH:mm').format(trip.departureTime))),
+                                    DataCell(Text('\$${trip.firstClassPrice?.toStringAsFixed(2)}')),
+                                    DataCell(Text('\$${trip.secondClassPrice?.toStringAsFixed(2)}')),
+                                    DataCell(Text('${trip.availableSeats}')),
+                                    DataCell(Text(trip.status.toUpperCase())),
                                     DataCell(Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         IconButton(
                                           icon: const Icon(Icons.edit, size: 20),
-                                          onPressed: () => _showTripDialog(context, adminProvider, tour: tour),
+                                          onPressed: () => _showTripDialog(context, adminProvider, trip: trip),
                                         ),
                                         IconButton(
                                           icon: const Icon(Icons.delete, size: 20, color: Colors.red),
@@ -1057,7 +1460,7 @@ class AdminTripsPage extends StatelessWidget {
                                               context: context,
                                               builder: (context) => AlertDialog(
                                                 title: const Text('Delete Trip'),
-                                                content: Text('Delete trip from ${tour.originCity} to ${tour.destinationCity}?'),
+                                                content: Text('Delete trip from ${trip.originCity} to ${trip.destinationCity}?'),
                                                 actions: [
                                                   TextButton(
                                                     onPressed: () => Navigator.pop(context, false),
@@ -1073,7 +1476,7 @@ class AdminTripsPage extends StatelessWidget {
                                             );
 
                                             if (confirm == true && context.mounted) {
-                                              final response = await adminProvider.deleteTour(tour.id);
+                                              final response = await adminProvider.deleteTrip(trip.id);
                                               if (context.mounted) {
                                                 ScaffoldMessenger.of(context).showSnackBar(
                                                   SnackBar(content: Text(response['message'] ?? 'Deleted')),

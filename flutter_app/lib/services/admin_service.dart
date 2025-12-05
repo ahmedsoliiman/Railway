@@ -2,8 +2,9 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
 import '../models/station.dart';
+import '../models/carriage.dart';
 import '../models/train.dart';
-import '../models/tour.dart';
+import '../models/trip.dart';
 import 'storage_service.dart';
 
 class AdminService {
@@ -61,7 +62,8 @@ class AdminService {
       final data = json.decode(response.body);
       
       if (response.statusCode == 200 && data['success']) {
-        final stations = (data['data']['stations'] as List)
+        final List<dynamic> stationsJson = data['data'];
+        final stations = stationsJson
             .map((s) => Station.fromJson(s))
             .toList();
         
@@ -203,6 +205,116 @@ class AdminService {
     }
   }
 
+  // ============ CARRIAGES MANAGEMENT ============
+  
+  Future<Map<String, dynamic>> getCarriages() async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse('${AppConfig.baseUrl}/admin/carriages'),
+        headers: headers,
+      );
+
+      final data = json.decode(response.body);
+      
+      if (response.statusCode == 200 && data['success']) {
+        final List<dynamic> carriagesJson = data['data'];
+        return {
+          'success': true,
+          'data': carriagesJson.map((json) => Carriage.fromJson(json)).toList(),
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Failed to fetch carriages',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Network error: ${e.toString()}',
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> createCarriage({
+    required String name,
+    required String classType,
+    required int seatsCount,
+    String? model,
+    String? description,
+  }) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.post(
+        Uri.parse('${AppConfig.baseUrl}/admin/carriages'),
+        headers: headers,
+        body: json.encode({
+          'name': name,
+          'class_type': classType,
+          'seats_count': seatsCount,
+          if (model != null) 'model': model,
+          if (description != null) 'description': description,
+        }),
+      );
+
+      return json.decode(response.body);
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Network error: ${e.toString()}',
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> updateCarriage({
+    required int id,
+    String? name,
+    String? classType,
+    int? seatsCount,
+    String? model,
+    String? description,
+  }) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.put(
+        Uri.parse('${AppConfig.baseUrl}/admin/carriages/$id'),
+        headers: headers,
+        body: json.encode({
+          if (name != null) 'name': name,
+          if (classType != null) 'class_type': classType,
+          if (seatsCount != null) 'seats_count': seatsCount,
+          if (model != null) 'model': model,
+          if (description != null) 'description': description,
+        }),
+      );
+
+      return json.decode(response.body);
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Network error: ${e.toString()}',
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> deleteCarriage(int id) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.delete(
+        Uri.parse('${AppConfig.baseUrl}/admin/carriages/$id'),
+        headers: headers,
+      );
+
+      return json.decode(response.body);
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Network error: ${e.toString()}',
+      };
+    }
+  }
+
   // ============ TRAINS MANAGEMENT ============
   
   Future<Map<String, dynamic>> getTrains() async {
@@ -216,7 +328,8 @@ class AdminService {
       final data = json.decode(response.body);
       
       if (response.statusCode == 200 && data['success']) {
-        final trains = (data['data']['trains'] as List)
+        final List<dynamic> trainsJson = data['data'];
+        final trains = trainsJson
             .map((t) => Train.fromJson(t))
             .toList();
         
@@ -242,9 +355,7 @@ class AdminService {
     required String trainNumber,
     required String name,
     required String type,
-    required int totalSeats,
-    required int firstClassSeats,
-    required int secondClassSeats,
+    required List<Map<String, dynamic>> carriages,
     String? facilities,
     String? status,
   }) async {
@@ -257,9 +368,7 @@ class AdminService {
           'train_number': trainNumber,
           'name': name,
           'type': type,
-          'total_seats': totalSeats,
-          'first_class_seats': firstClassSeats,
-          'second_class_seats': secondClassSeats,
+          'carriages': carriages,
           'facilities': facilities,
           'status': status ?? 'active',
         }),
@@ -292,9 +401,7 @@ class AdminService {
     String? trainNumber,
     String? name,
     String? type,
-    int? totalSeats,
-    int? firstClassSeats,
-    int? secondClassSeats,
+    List<Map<String, dynamic>>? carriages,
     String? facilities,
     String? status,
   }) async {
@@ -307,9 +414,7 @@ class AdminService {
           if (trainNumber != null) 'train_number': trainNumber,
           if (name != null) 'name': name,
           if (type != null) 'type': type,
-          if (totalSeats != null) 'total_seats': totalSeats,
-          if (firstClassSeats != null) 'first_class_seats': firstClassSeats,
-          if (secondClassSeats != null) 'second_class_seats': secondClassSeats,
+          if (carriages != null) 'carriages': carriages,
           if (facilities != null) 'facilities': facilities,
           if (status != null) 'status': status,
         }),
@@ -366,31 +471,32 @@ class AdminService {
     }
   }
 
-  // ============ TOURS MANAGEMENT ============
+  // ============ TRIPS MANAGEMENT ============
   
-  Future<Map<String, dynamic>> getTours() async {
+  Future<Map<String, dynamic>> getTrips() async {
     try {
       final headers = await _getHeaders();
       final response = await http.get(
-        Uri.parse('${AppConfig.baseUrl}/admin/tours'),
+        Uri.parse('${AppConfig.baseUrl}/admin/trips'),
         headers: headers,
       );
 
       final data = json.decode(response.body);
       
       if (response.statusCode == 200 && data['success']) {
-        final tours = (data['data']['tours'] as List)
-            .map((t) => Tour.fromJson(t))
+        final List<dynamic> tripsJson = data['data'];
+        final trips = tripsJson
+            .map((t) => Trip.fromJson(t))
             .toList();
         
         return {
           'success': true,
-          'data': tours,
+          'data': trips,
         };
       } else {
         return {
           'success': false,
-          'message': data['message'] ?? 'Failed to fetch tours',
+          'message': data['message'] ?? 'Failed to fetch trips',
         };
       }
     } catch (e) {
@@ -401,7 +507,7 @@ class AdminService {
     }
   }
 
-  Future<Map<String, dynamic>> createTour({
+  Future<Map<String, dynamic>> createTrip({
     required int trainId,
     required int originStationId,
     required int destinationStationId,
@@ -415,7 +521,7 @@ class AdminService {
     try {
       final headers = await _getHeaders();
       final response = await http.post(
-        Uri.parse('${AppConfig.baseUrl}/admin/tours'),
+        Uri.parse('${AppConfig.baseUrl}/admin/trips'),
         headers: headers,
         body: json.encode({
           'train_id': trainId,
@@ -434,28 +540,28 @@ class AdminService {
       
       if (response.statusCode == 201 && data['success']) {
         try {
-          final tour = Tour.fromJson(data['data']['tour']);
+          final trip = Trip.fromJson(data['data']['trip']);
           return {
             'success': true,
             'message': data['message'],
-            'data': tour,
+            'data': trip,
           };
         } catch (parseError) {
-          print('Tour parsing error: $parseError');
-          print('Tour data: ${data['data']['tour']}');
+          print('Trip parsing error: $parseError');
+          print('Trip data: ${data['data']['trip']}');
           return {
             'success': false,
-            'message': 'Failed to parse tour data: ${parseError.toString()}',
+            'message': 'Failed to parse trip data: ${parseError.toString()}',
           };
         }
       } else {
         return {
           'success': false,
-          'message': data['message'] ?? 'Failed to create tour',
+          'message': data['message'] ?? 'Failed to create trip',
         };
       }
     } catch (e) {
-      print('Create tour error: $e');
+      print('Create trip error: $e');
       return {
         'success': false,
         'message': 'Network error: ${e.toString()}',
@@ -463,7 +569,7 @@ class AdminService {
     }
   }
 
-  Future<Map<String, dynamic>> updateTour({
+  Future<Map<String, dynamic>> updateTrip({
     required int id,
     int? trainId,
     int? originStationId,
@@ -478,7 +584,7 @@ class AdminService {
     try {
       final headers = await _getHeaders();
       final response = await http.put(
-        Uri.parse('${AppConfig.baseUrl}/admin/tours/$id'),
+        Uri.parse('${AppConfig.baseUrl}/admin/trips/$id'),
         headers: headers,
         body: json.encode({
           if (trainId != null) 'train_id': trainId,
@@ -497,28 +603,28 @@ class AdminService {
       
       if (response.statusCode == 200 && data['success']) {
         try {
-          final tour = Tour.fromJson(data['data']['tour']);
+          final trip = Trip.fromJson(data['data']['trip']);
           return {
             'success': true,
             'message': data['message'],
-            'data': tour,
+            'data': trip,
           };
         } catch (parseError) {
-          print('Tour parsing error: $parseError');
-          print('Tour data: ${data['data']['tour']}');
+          print('Trip parsing error: $parseError');
+          print('Trip data: ${data['data']['trip']}');
           return {
             'success': false,
-            'message': 'Failed to parse tour data: ${parseError.toString()}',
+            'message': 'Failed to parse trip data: ${parseError.toString()}',
           };
         }
       } else {
         return {
           'success': false,
-          'message': data['message'] ?? 'Failed to update tour',
+          'message': data['message'] ?? 'Failed to update trip',
         };
       }
     } catch (e) {
-      print('Update tour error: $e');
+      print('Update trip error: $e');
       return {
         'success': false,
         'message': 'Network error: ${e.toString()}',
@@ -526,11 +632,11 @@ class AdminService {
     }
   }
 
-  Future<Map<String, dynamic>> deleteTour(int id) async {
+  Future<Map<String, dynamic>> deleteTrip(int id) async {
     try {
       final headers = await _getHeaders();
       final response = await http.delete(
-        Uri.parse('${AppConfig.baseUrl}/admin/tours/$id'),
+        Uri.parse('${AppConfig.baseUrl}/admin/trips/$id'),
         headers: headers,
       );
 
@@ -544,7 +650,7 @@ class AdminService {
       } else {
         return {
           'success': false,
-          'message': data['message'] ?? 'Failed to delete tour',
+          'message': data['message'] ?? 'Failed to delete trip',
         };
       }
     } catch (e) {

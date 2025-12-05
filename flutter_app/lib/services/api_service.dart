@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
 import '../models/user.dart';
-import '../models/tour.dart';
+import '../models/trip.dart';
 import '../models/station.dart';
 import '../models/reservation.dart';
 import 'storage_service.dart';
@@ -23,7 +23,6 @@ class ApiService {
     required String fullName,
     required String email,
     required String password,
-    String? phone,
   }) async {
     try {
       final response = await http.post(
@@ -33,7 +32,6 @@ class ApiService {
           'full_name': fullName,
           'email': email,
           'password': password,
-          if (phone != null) 'phone': phone,
         }),
       );
 
@@ -115,8 +113,8 @@ class ApiService {
     }
   }
 
-  // Tours APIs
-  Future<List<Tour>> getTours({
+  // Trips APIs
+  Future<List<Trip>> getTrips({
     int? originId,
     int? destinationId,
     String? date,
@@ -124,7 +122,7 @@ class ApiService {
   }) async {
     try {
       final headers = await _getHeaders();
-      var url = '${AppConfig.baseUrl}${AppConfig.toursEndpoint}';
+      var url = '${AppConfig.baseUrl}${AppConfig.tripsEndpoint}';
       
       final queryParams = <String>[];
       if (originId != null) queryParams.add('origin=$originId');
@@ -143,31 +141,31 @@ class ApiService {
 
       final data = jsonDecode(response.body);
       if (data['success'] && data['data'] != null) {
-        final List toursJson = data['data']['tours'];
-        return toursJson.map((json) => Tour.fromJson(json)).toList();
+        final List tripsJson = data['data']['trips'];
+        return tripsJson.map((json) => Trip.fromJson(json)).toList();
       }
       return [];
     } catch (e) {
-      print('Get tours error: $e');
+      print('Get trips error: $e');
       return [];
     }
   }
 
-  Future<Tour?> getTourDetails(int tourId) async {
+  Future<Trip?> getTripDetails(int tripId) async {
     try {
       final headers = await _getHeaders();
       final response = await http.get(
-        Uri.parse('${AppConfig.baseUrl}${AppConfig.toursEndpoint}/$tourId'),
+        Uri.parse('${AppConfig.baseUrl}${AppConfig.tripsEndpoint}/$tripId'),
         headers: headers,
       );
 
       final data = jsonDecode(response.body);
       if (data['success'] && data['data'] != null) {
-        return Tour.fromJson(data['data']['tour']);
+        return Trip.fromJson(data['data']['trip']);
       }
       return null;
     } catch (e) {
-      print('Get tour details error: $e');
+      print('Get trip details error: $e');
       return null;
     }
   }
@@ -195,7 +193,7 @@ class ApiService {
 
   // Reservations APIs
   Future<Map<String, dynamic>> createReservation({
-    required int tourId,
+    required int tripId,
     required String seatClass,
     required int numberOfSeats,
   }) async {
@@ -205,7 +203,7 @@ class ApiService {
         Uri.parse('${AppConfig.baseUrl}${AppConfig.reservationsEndpoint}'),
         headers: headers,
         body: jsonEncode({
-          'tour_id': tourId,
+          'trip_id': tripId,
           'seat_class': seatClass,
           'number_of_seats': numberOfSeats,
         }),
