@@ -35,11 +35,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   final List<Widget> _pages = [
-    const AdminOverviewPage(),
     const AdminStationsPage(),
     const AdminCarriagesPage(),
     const AdminTrainsPage(),
     const AdminTripsPage(),
+    const AdminDeparturesPage(),
     const AdminUsersPage(),
   ];
 
@@ -122,11 +122,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
             destinations: const [
               NavigationRailDestination(
-                icon: Icon(Icons.dashboard_outlined),
-                selectedIcon: Icon(Icons.dashboard),
-                label: Text('Overview'),
-              ),
-              NavigationRailDestination(
                 icon: Icon(Icons.location_on_outlined),
                 selectedIcon: Icon(Icons.location_on),
                 label: Text('Stations'),
@@ -145,6 +140,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 icon: Icon(Icons.route_outlined),
                 selectedIcon: Icon(Icons.route),
                 label: Text('Trips'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.schedule_outlined),
+                selectedIcon: Icon(Icons.schedule),
+                label: Text('Departures'),
               ),
               NavigationRailDestination(
                 icon: Icon(Icons.people_outline),
@@ -1266,6 +1266,24 @@ class AdminTripsPage extends StatelessWidget {
                     validator: (v) => v == null ? 'Required' : null,
                   ),
                   ListTile(
+                    title: const Text('Departure Date'),
+                    subtitle: Text(DateFormat('yyyy-MM-dd').format(departure)),
+                    trailing: const Icon(Icons.calendar_today),
+                    onTap: () async {
+                      final date = await showDatePicker(
+                        context: context,
+                        initialDate: departure,
+                        firstDate: DateTime.now(),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                      );
+                      if (date != null) {
+                        setState(() {
+                          departure = date;
+                        });
+                      }
+                    },
+                  ),
+                  ListTile(
                     title: const Text('Departure Time'),
                     subtitle: Text(DateFormat('yyyy-MM-dd HH:mm').format(departureTime)),
                     trailing: const Icon(Icons.calendar_today),
@@ -1422,7 +1440,8 @@ class AdminTripsPage extends StatelessWidget {
                                 columns: const [
                                   DataColumn(label: Text('Train')),
                                   DataColumn(label: Text('Route')),
-                                  DataColumn(label: Text('Departure')),
+                                  DataColumn(label: Text('Departure Date')),
+                                  DataColumn(label: Text('Departure Time')),
                                   DataColumn(label: Text('1st Class')),
                                   DataColumn(label: Text('2nd Class')),
                                   DataColumn(label: Text('Quantities')),
@@ -1432,7 +1451,8 @@ class AdminTripsPage extends StatelessWidget {
                                   return DataRow(cells: [
                                     DataCell(Text(trip.trainName)),
                                     DataCell(Text('${trip.originCity} → ${trip.destinationCity}')),
-                                    DataCell(Text(DateFormat('MMM dd, HH:mm').format(trip.departureTime))),
+                                    DataCell(Text(DateFormat('MMM dd, yyyy').format(trip.departure))),
+                                    DataCell(Text(DateFormat('HH:mm').format(trip.departureTime))),
                                     DataCell(Text('\$${trip.firstClassPrice?.toStringAsFixed(2)}')),
                                     DataCell(Text('\$${trip.secondClassPrice?.toStringAsFixed(2)}')),
                                     DataCell(Text('${trip.quantities}')),
@@ -1477,6 +1497,134 @@ class AdminTripsPage extends StatelessWidget {
                                         ),
                                       ],
                                     )),
+                                  ]);
+                                }).toList(),
+                              ),
+                            ),
+                          ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+// Departures Management Page
+class AdminDeparturesPage extends StatelessWidget {
+  const AdminDeparturesPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<AdminProvider>(
+      builder: (context, adminProvider, child) {
+        return Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Trip Departures',
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.refresh),
+                    onPressed: () => adminProvider.loadTrips(),
+                    tooltip: 'Refresh',
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              Expanded(
+                child: adminProvider.isLoadingTrips
+                    ? const Center(child: CircularProgressIndicator())
+                    : adminProvider.trips.isEmpty
+                        ? const Center(child: Text('No trips scheduled'))
+                        : Card(
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: DataTable(
+                                columns: const [
+                                  DataColumn(label: Text('Departure Date')),
+                                  DataColumn(label: Text('Departure Time')),
+                                  DataColumn(label: Text('Train')),
+                                  DataColumn(label: Text('Route')),
+                                  DataColumn(label: Text('Arrival Time')),
+                                  DataColumn(label: Text('Duration')),
+                                  DataColumn(label: Text('Quantities')),
+                                  DataColumn(label: Text('Status')),
+                                ],
+                                rows: adminProvider.trips.map((trip) {
+                                  final duration = trip.arrivalTime.difference(trip.departureTime);
+                                  final hours = duration.inHours;
+                                  final minutes = duration.inMinutes.remainder(60);
+                                  
+                                  return DataRow(cells: [
+                                    DataCell(Text(DateFormat('MMM dd, yyyy').format(trip.departure))),
+                                    DataCell(
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                        decoration: BoxDecoration(
+                                          color: Colors.blue.shade50,
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          DateFormat('HH:mm').format(trip.departureTime),
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: AppTheme.primaryColor,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    DataCell(Text('${trip.trainName} (${trip.trainNumber})')),
+                                    DataCell(Text('${trip.originCity} → ${trip.destinationCity}')),
+                                    DataCell(Text(DateFormat('HH:mm').format(trip.arrivalTime))),
+                                    DataCell(Text('${hours}h ${minutes}m')),
+                                    DataCell(
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: trip.quantities < 10 ? Colors.red.shade100 : Colors.green.shade100,
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Text(
+                                          '${trip.quantities} seats',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            color: trip.quantities < 10 ? Colors.red.shade900 : Colors.green.shade900,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    DataCell(
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: trip.departure.isAfter(DateTime.now()) 
+                                              ? Colors.green.shade100 
+                                              : Colors.orange.shade100,
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Text(
+                                          trip.departure.isAfter(DateTime.now()) ? 'SCHEDULED' : 'DEPARTED',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            color: trip.departure.isAfter(DateTime.now()) 
+                                                ? Colors.green.shade900 
+                                                : Colors.orange.shade900,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
                                   ]);
                                 }).toList(),
                               ),
