@@ -179,10 +179,10 @@ INSERT INTO train_carriages (train_id, carriage_id, quantity) VALUES
 (3, 4, 2);
 
 -- Sample Trips
-INSERT INTO trips (train_id, origin_station_id, destination_station_id, departure_time, arrival_time, first_class_price, second_class_price, available_seats, status) VALUES
-(1, 1, 2, '2025-12-10 08:00:00', '2025-12-10 11:00:00', 150.00, 80.00, 200, 'scheduled'),
-(2, 1, 3, '2025-12-11 09:00:00', '2025-12-11 20:00:00', 300.00, 150.00, 150, 'scheduled'),
-(3, 2, 1, '2025-12-12 14:00:00', '2025-12-12 17:00:00', 120.00, 60.00, 250, 'scheduled');
+INSERT INTO trips (train_id, origin_station_id, destination_station_id, departure, departure_time, arrival_time, first_class_price, second_class_price, quantities) VALUES
+(1, 1, 2, '2025-12-10', '2025-12-10 08:00:00', '2025-12-10 11:00:00', 150.00, 80.00, 200),
+(2, 1, 3, '2025-12-11', '2025-12-11 09:00:00', '2025-12-11 20:00:00', 300.00, 150.00, 150),
+(3, 2, 1, '2025-12-12', '2025-12-12 14:00:00', '2025-12-12 17:00:00', 120.00, 60.00, 250);
 
 -- =====================================================
 -- COMPLETION MESSAGE
