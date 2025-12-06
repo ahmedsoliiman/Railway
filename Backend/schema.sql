@@ -129,7 +129,6 @@ CREATE INDEX idx_users_role ON users(role);
 CREATE INDEX idx_stations_code ON stations(code);
 CREATE INDEX idx_trains_number ON trains(train_number);
 CREATE INDEX idx_trips_departure ON trips(departure_time);
-CREATE INDEX idx_trips_status ON trips(status);
 CREATE INDEX idx_reservations_user ON reservations(user_id);
 CREATE INDEX idx_reservations_trip ON reservations(trip_id);
 CREATE INDEX idx_reservations_reference ON reservations(booking_reference);
