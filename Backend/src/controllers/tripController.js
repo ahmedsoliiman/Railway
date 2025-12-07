@@ -202,16 +202,19 @@ exports.getAllTripsAdmin = async (req, res) => {
       data: trips.map(trip => ({
         id: trip.id,
         trainId: trip.train_id,
+        originStationId: trip.origin_station_id,
+        destinationStationId: trip.destination_station_id,
+        departure: trip.departure,
         departureTime: trip.departure_time,
         arrivalTime: trip.arrival_time,
         firstClassPrice: parseFloat(trip.first_class_price),
         secondClassPrice: parseFloat(trip.second_class_price),
-        availableFirstClassSeats: trip.available_first_class_seats,
-        availableSecondClassSeats: trip.available_second_class_seats,
-        status: trip.status,
+        economicPrice: trip.economic_price ? parseFloat(trip.economic_price) : null,
+        quantities: trip.quantities,
         train: {
           trainNumber: trip.train.train_number,
           name: trip.train.name,
+          type: trip.train.type,
         },
         departureStation: {
           name: trip.departureStation.name,
@@ -242,13 +245,16 @@ exports.createTrip = async (req, res) => {
     const train_id = req.body.train_id || req.body.trainId;
     const origin_station_id = req.body.origin_station_id || req.body.originStationId;
     const destination_station_id = req.body.destination_station_id || req.body.destinationStationId;
+    const departure = req.body.departure;
     const departure_time = req.body.departure_time || req.body.departureTime;
     const arrival_time = req.body.arrival_time || req.body.arrivalTime;
     const first_class_price = req.body.first_class_price || req.body.firstClassPrice;
     const second_class_price = req.body.second_class_price || req.body.secondClassPrice;
+    const economic_price = req.body.economic_price || req.body.economicPrice;
+    const quantities = req.body.quantities;
 
     // Validation
-    if (!train_id || !origin_station_id || !destination_station_id || !departure_time || !arrival_time || !first_class_price || !second_class_price) {
+    if (!train_id || !origin_station_id || !destination_station_id || !departure || !departure_time || !arrival_time || !first_class_price || !second_class_price || !economic_price || !quantities) {
       return res.status(400).json({
         success: false,
         message: 'Please provide all required fields',
@@ -286,13 +292,13 @@ exports.createTrip = async (req, res) => {
       train_id,
       origin_station_id,
       destination_station_id,
+      departure,
       departure_time,
       arrival_time,
       first_class_price,
       second_class_price,
-      available_first_class_seats: train.first_class_seats,
-      available_second_class_seats: train.second_class_seats,
-      status: 'scheduled',
+      economic_price,
+      quantities,
     });
 
     res.status(201).json({
@@ -302,15 +308,15 @@ exports.createTrip = async (req, res) => {
         trip: {
           id: trip.id,
           trainId: trip.train_id,
-          fromStationId: trip.origin_station_id,
-          toStationId: trip.destination_station_id,
+          originStationId: trip.origin_station_id,
+          destinationStationId: trip.destination_station_id,
+          departure: trip.departure,
           departureTime: trip.departure_time,
           arrivalTime: trip.arrival_time,
           firstClassPrice: parseFloat(trip.first_class_price),
           secondClassPrice: parseFloat(trip.second_class_price),
-          availableFirstClassSeats: trip.available_first_class_seats,
-          availableSecondClassSeats: trip.available_second_class_seats,
-          status: trip.status,
+          economicPrice: parseFloat(trip.economic_price),
+          quantities: trip.quantities,
         },
       },
     });
@@ -333,11 +339,13 @@ exports.updateTrip = async (req, res) => {
     const train_id = req.body.train_id || req.body.trainId;
     const origin_station_id = req.body.origin_station_id || req.body.originStationId;
     const destination_station_id = req.body.destination_station_id || req.body.destinationStationId;
+    const departure = req.body.departure;
     const departure_time = req.body.departure_time || req.body.departureTime;
     const arrival_time = req.body.arrival_time || req.body.arrivalTime;
     const first_class_price = req.body.first_class_price || req.body.firstClassPrice;
     const second_class_price = req.body.second_class_price || req.body.secondClassPrice;
-    const status = req.body.status;
+    const economic_price = req.body.economic_price || req.body.economicPrice;
+    const quantities = req.body.quantities;
 
     const trip = await Trip.findByPk(id);
     if (!trip) {
@@ -359,11 +367,13 @@ exports.updateTrip = async (req, res) => {
       train_id: train_id || trip.train_id,
       origin_station_id: origin_station_id || trip.origin_station_id,
       destination_station_id: destination_station_id || trip.destination_station_id,
+      departure: departure || trip.departure,
       departure_time: departure_time || trip.departure_time,
       arrival_time: arrival_time || trip.arrival_time,
       first_class_price: first_class_price !== undefined ? first_class_price : trip.first_class_price,
       second_class_price: second_class_price !== undefined ? second_class_price : trip.second_class_price,
-      status: status || trip.status,
+      economic_price: economic_price !== undefined ? economic_price : trip.economic_price,
+      quantities: quantities !== undefined ? quantities : trip.quantities,
       updated_at: new Date(),
     });
 
@@ -374,13 +384,15 @@ exports.updateTrip = async (req, res) => {
         trip: {
           id: trip.id,
           trainId: trip.train_id,
-          fromStationId: trip.origin_station_id,
-          toStationId: trip.destination_station_id,
+          originStationId: trip.origin_station_id,
+          destinationStationId: trip.destination_station_id,
+          departure: trip.departure,
           departureTime: trip.departure_time,
           arrivalTime: trip.arrival_time,
           firstClassPrice: parseFloat(trip.first_class_price),
           secondClassPrice: parseFloat(trip.second_class_price),
-          status: trip.status,
+          economicPrice: parseFloat(trip.economic_price),
+          quantities: trip.quantities,
         },
       },
     });

@@ -142,7 +142,61 @@ const sendBookingConfirmation = async (email, fullName, bookingDetails) => {
   }
 };
 
+const sendPasswordResetEmail = async (email, fullName, code) => {
+  const mailOptions = {
+    from: process.env.EMAIL_FROM,
+    to: email,
+    subject: 'Password Reset Code - Train Booking System',
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+          .code { font-size: 32px; font-weight: bold; color: #667eea; text-align: center; letter-spacing: 5px; padding: 20px; background: white; border-radius: 10px; margin: 20px 0; }
+          .warning { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 5px; }
+          .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>🔒 Password Reset Request</h1>
+          </div>
+          <div class="content">
+            <h2>Hello ${fullName},</h2>
+            <p>We received a request to reset your password. Use the code below to proceed:</p>
+            <div class="code">${code}</div>
+            <p>This code will expire in 15 minutes.</p>
+            <div class="warning">
+              <strong>⚠️ Security Notice:</strong><br>
+              If you didn't request a password reset, please ignore this email and ensure your account is secure.
+            </div>
+            <p>Best regards,<br>Train Booking System Team</p>
+          </div>
+          <div class="footer">
+            <p>&copy; 2024 Train Booking System. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    return true;
+  } catch (error) {
+    console.error('Email sending error:', error);
+    return false;
+  }
+};
+
 module.exports = {
   sendVerificationEmail,
   sendBookingConfirmation,
+  sendPasswordResetEmail,
 };

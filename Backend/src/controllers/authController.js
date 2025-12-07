@@ -324,6 +324,181 @@ exports.resendCode = async (req, res) => {
   }
 };
 
+// @desc    Forgot password - send reset code
+// @route   POST /api/auth/forgot-password
+// @access  Public
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide email',
+      });
+    }
+
+    const user = await User.findOne({ where: { email } });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'No account found with this email',
+      });
+    }
+
+    // Generate 6-digit reset code
+    const resetCode = generateVerificationToken();
+    const resetCodeExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+    // Save reset code to user
+    await user.update({
+      verification_token: resetCode,
+      verification_token_expires: resetCodeExpires,
+    });
+
+    // Send reset code email
+    try {
+      await emailService.sendPasswordResetEmail(email, user.full_name, resetCode);
+      
+      res.json({
+        success: true,
+        message: 'Password reset code sent to your email',
+      });
+    } catch (emailError) {
+      console.error('Failed to send reset email:', emailError);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to send reset code',
+      });
+    }
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+    });
+  }
+};
+
+// @desc    Verify reset code
+// @route   POST /api/auth/verify-reset-code
+// @access  Public
+exports.verifyResetCode = async (req, res) => {
+  try {
+    const { email, code } = req.body;
+
+    if (!email || !code) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide email and code',
+      });
+    }
+
+    const user = await User.findOne({ where: { email } });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    if (user.verification_token !== code) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid reset code',
+      });
+    }
+
+    if (new Date() > user.verification_token_expires) {
+      return res.status(400).json({
+        success: false,
+        message: 'Reset code has expired',
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Code verified successfully',
+    });
+  } catch (error) {
+    console.error('Verify reset code error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+    });
+  }
+};
+
+// @desc    Reset password
+// @route   POST /api/auth/reset-password
+// @access  Public
+exports.resetPassword = async (req, res) => {
+  try {
+    const { email, code, newPassword } = req.body;
+
+    if (!email || !code || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide email, code, and new password',
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 6 characters',
+      });
+    }
+
+    const user = await User.findOne({ where: { email } });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    if (user.verification_token !== code) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid reset code',
+      });
+    }
+
+    if (new Date() > user.verification_token_expires) {
+      return res.status(400).json({
+        success: false,
+        message: 'Reset code has expired',
+      });
+    }
+
+    // Hash new password
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(newPassword, salt);
+
+    // Update password and clear reset token
+    await user.update({
+      password_hash: passwordHash,
+      verification_token: null,
+      verification_token_expires: null,
+    });
+
+    res.json({
+      success: true,
+      message: 'Password reset successful',
+    });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+    });
+  }
+};
+
 // @desc    Get current user
 // @route   GET /api/auth/me
 // @access  Private
