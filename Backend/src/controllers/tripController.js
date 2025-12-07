@@ -10,7 +10,11 @@ exports.getAllTrips = async (req, res) => {
 
     const where = {};
 
-    // Filter by date (departure date)
+    // Filter by stations
+    if (from_station) where.origin_station_id = from_station;
+    if (to_station) where.destination_station_id = to_station;
+
+    // Filter by date and future departure
     if (date) {
       const startDate = new Date(date);
       startDate.setHours(0, 0, 0, 0);
@@ -18,20 +22,18 @@ exports.getAllTrips = async (req, res) => {
       endDate.setHours(23, 59, 59, 999);
 
       where.departure_time = {
-        [Op.between]: [startDate, endDate],
+        [Op.and]: [
+          { [Op.gte]: startDate },
+          { [Op.lte]: endDate },
+          { [Op.gt]: new Date() }
+        ]
+      };
+    } else {
+      // No specific date, just show future trips
+      where.departure_time = {
+        [Op.gt]: new Date(),
       };
     }
-
-    // Filter by stations
-    if (from_station) where.origin_station_id = from_station;
-    if (to_station) where.destination_station_id = to_station;
-
-    // Only show scheduled trips with future departure
-    where.status = 'scheduled';
-    where.departure_time = {
-      ...where.departure_time,
-      [Op.gt]: new Date(),
-    };
 
     const trips = await Trip.findAll({
       where,
@@ -58,9 +60,9 @@ exports.getAllTrips = async (req, res) => {
     // Filter by seat availability if seat_class specified
     let filteredTrips = trips;
     if (seat_class === 'first') {
-      filteredTrips = trips.filter(t => t.available_first_class_seats > 0);
+      filteredTrips = trips.filter(t => t.first_class_price && t.quantities > 0);
     } else if (seat_class === 'second') {
-      filteredTrips = trips.filter(t => t.available_second_class_seats > 0);
+      filteredTrips = trips.filter(t => t.second_class_price && t.quantities > 0);
     }
 
     res.json({
@@ -71,9 +73,7 @@ exports.getAllTrips = async (req, res) => {
         arrivalTime: trip.arrival_time,
         firstClassPrice: parseFloat(trip.first_class_price),
         secondClassPrice: parseFloat(trip.second_class_price),
-        availableFirstClassSeats: trip.available_first_class_seats,
-        availableSecondClassSeats: trip.available_second_class_seats,
-        status: trip.status,
+        quantities: trip.quantities,
         train: {
           id: trip.train.id,
           trainNumber: trip.train.train_number,
@@ -145,7 +145,6 @@ exports.getTripById = async (req, res) => {
         secondClassPrice: parseFloat(trip.second_class_price),
         availableFirstClassSeats: trip.available_first_class_seats,
         availableSecondClassSeats: trip.available_second_class_seats,
-        status: trip.status,
         train: {
           id: trip.train.id,
           trainNumber: trip.train.train_number,

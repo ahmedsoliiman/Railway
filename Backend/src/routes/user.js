@@ -187,7 +187,7 @@ router.get('/tours/:id', async (req, res) => {
 router.get('/stations', async (req, res) => {
   try {
     const result = await db.query(
-      'SELECT id, name, city, address FROM stations ORDER BY city, name'
+      'SELECT id, name, code, city, address FROM stations ORDER BY city, name'
     );
 
     res.json({
