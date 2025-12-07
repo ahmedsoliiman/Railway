@@ -139,7 +139,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         return Column(
                           children: [
                             DropdownButtonFormField<int>(
-                              value: _selectedOriginId,
+                              initialValue: _selectedOriginId,
                               decoration: const InputDecoration(
                                 labelText: 'From (Origin)',
                                 prefixIcon: Icon(Icons.location_on_outlined),
@@ -158,7 +158,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             const SizedBox(height: 16),
                             DropdownButtonFormField<int>(
-                              value: _selectedDestinationId,
+                              initialValue: _selectedDestinationId,
                               decoration: const InputDecoration(
                                 labelText: 'To (Destination)',
                                 prefixIcon: Icon(Icons.flag_outlined),

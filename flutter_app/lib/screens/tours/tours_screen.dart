@@ -73,7 +73,7 @@ class _TripsScreenState extends State<TripsScreen> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _selectedTrainType,
+                initialValue: _selectedTrainType,
                 decoration: const InputDecoration(
                   labelText: 'Train Type',
                   border: OutlineInputBorder(),
@@ -88,7 +88,7 @@ class _TripsScreenState extends State<TripsScreen> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _selectedClass,
+                initialValue: _selectedClass,
                 decoration: const InputDecoration(
                   labelText: 'Seat Class',
                   border: OutlineInputBorder(),

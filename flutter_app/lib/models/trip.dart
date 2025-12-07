@@ -16,6 +16,7 @@ class Trip {
   final DateTime arrivalTime;
   final double? firstClassPrice;
   final double? secondClassPrice;
+  final double? economicPrice;
   final int quantities;
 
   Trip({
@@ -36,6 +37,7 @@ class Trip {
     required this.arrivalTime,
     this.firstClassPrice,
     this.secondClassPrice,
+    this.economicPrice,
     required this.quantities,
   });
 
@@ -44,6 +46,15 @@ class Trip {
     final trainData = json['train'];
     final departureStationData = json['departureStation'];
     final arrivalStationData = json['arrivalStation'];
+    
+    // Parse departure time first
+    final departureTimeStr = json['departureTime'] ?? json['departure_time'];
+    final parsedDepartureTime = DateTime.parse(departureTimeStr);
+    
+    // If departure field exists, use it; otherwise extract date from departureTime
+    final departure = json['departure'] != null 
+        ? DateTime.parse(json['departure'])
+        : DateTime(parsedDepartureTime.year, parsedDepartureTime.month, parsedDepartureTime.day);
     
     return Trip(
       id: json['id'],
@@ -58,14 +69,17 @@ class Trip {
       destinationStationId: json['destinationStationId'] ?? json['destination_station_id'],
       destinationName: arrivalStationData?['name'] ?? json['destination_name'] ?? '',
       destinationCity: arrivalStationData?['city'] ?? json['destination_city'] ?? '',
-      departure: DateTime.parse(json['departure']),
-      departureTime: DateTime.parse(json['departureTime'] ?? json['departure_time']),
+      departure: departure,
+      departureTime: parsedDepartureTime,
       arrivalTime: DateTime.parse(json['arrivalTime'] ?? json['arrival_time']),
       firstClassPrice: (json['firstClassPrice'] ?? json['first_class_price']) != null 
           ? double.parse((json['firstClassPrice'] ?? json['first_class_price']).toString()) 
           : null,
       secondClassPrice: (json['secondClassPrice'] ?? json['second_class_price']) != null 
           ? double.parse((json['secondClassPrice'] ?? json['second_class_price']).toString()) 
+          : null,
+      economicPrice: (json['economicPrice'] ?? json['economic_price']) != null 
+          ? double.parse((json['economicPrice'] ?? json['economic_price']).toString()) 
           : null,
       quantities: json['quantities'] ?? 0,
     );

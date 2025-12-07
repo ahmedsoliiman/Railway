@@ -304,6 +304,7 @@ class AdminStationsPage extends StatelessWidget {
 
   void _showStationDialog(BuildContext context, {Station? station}) {
     final nameController = TextEditingController(text: station?.name);
+    final codeController = TextEditingController(text: station?.code);
     final cityController = TextEditingController(text: station?.city);
     final addressController = TextEditingController(text: station?.address);
     final facilitiesController = TextEditingController(text: station?.facilities);
@@ -326,6 +327,14 @@ class AdminStationsPage extends StatelessWidget {
                 hint: 'e.g., Central Station',
                 icon: Icons.location_city,
                 validator: (v) => v?.isEmpty ?? true ? 'Station name is required' : null,
+              ),
+              const SizedBox(height: 16),
+              EnhancedTextField(
+                controller: codeController,
+                label: 'Station Code *',
+                hint: 'e.g., NYC',
+                icon: Icons.code,
+                validator: (v) => v?.isEmpty ?? true ? 'Station code is required' : null,
               ),
               const SizedBox(height: 16),
               EnhancedTextField(
@@ -373,6 +382,7 @@ class AdminStationsPage extends StatelessWidget {
               final response = station == null
                   ? await adminProvider.createStation(
                       name: nameController.text,
+                      code: codeController.text,
                       city: cityController.text,
                       address: addressController.text.isEmpty ? null : addressController.text,
                       facilities: facilitiesController.text.isEmpty ? null : facilitiesController.text,
@@ -380,6 +390,7 @@ class AdminStationsPage extends StatelessWidget {
                   : await adminProvider.updateStation(
                       id: station.id,
                       name: nameController.text,
+                      code: codeController.text,
                       city: cityController.text,
                       address: addressController.text.isEmpty ? null : addressController.text,
                       facilities: facilitiesController.text.isEmpty ? null : facilitiesController.text,
@@ -550,7 +561,7 @@ class AdminCarriagesPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
-                    value: selectedClassType,
+                    initialValue: selectedClassType,
                     decoration: const InputDecoration(
                       labelText: 'Class Type *',
                       border: OutlineInputBorder(),
@@ -1043,7 +1054,7 @@ class AdminTrainsPage extends StatelessWidget {
                 
                 // Convert selectedCarriages to API format
                 final carriages = selectedCarriages.entries
-                    .map((e) => {'carriage_id': e.key, 'quantity': e.value})
+                    .map((e) => {'carriageId': e.key, 'quantity': e.value})
                     .toList();
                 
                 final response = train == null
@@ -1209,6 +1220,7 @@ class AdminTripsPage extends StatelessWidget {
   void _showTripDialog(BuildContext context, AdminProvider adminProvider, {Trip? trip}) {
     final firstClassPriceController = TextEditingController(text: trip?.firstClassPrice?.toString());
     final secondClassPriceController = TextEditingController(text: trip?.secondClassPrice?.toString());
+    final economicPriceController = TextEditingController(text: trip?.economicPrice?.toString());
     final quantitiesController = TextEditingController(text: trip?.quantities.toString());
     int? selectedTrainId = trip?.trainId;
     int? selectedOriginId = trip?.originStationId;
@@ -1230,7 +1242,7 @@ class AdminTripsPage extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   DropdownButtonFormField<int>(
-                    value: selectedTrainId,
+                    initialValue: selectedTrainId,
                     decoration: const InputDecoration(labelText: 'Train'),
                     items: adminProvider.trains.map((train) {
                       return DropdownMenuItem(
@@ -1242,7 +1254,7 @@ class AdminTripsPage extends StatelessWidget {
                     validator: (v) => v == null ? 'Required' : null,
                   ),
                   DropdownButtonFormField<int>(
-                    value: selectedOriginId,
+                    initialValue: selectedOriginId,
                     decoration: const InputDecoration(labelText: 'Origin Station'),
                     items: adminProvider.stations.map((station) {
                       return DropdownMenuItem(
@@ -1254,7 +1266,7 @@ class AdminTripsPage extends StatelessWidget {
                     validator: (v) => v == null ? 'Required' : null,
                   ),
                   DropdownButtonFormField<int>(
-                    value: selectedDestinationId,
+                    initialValue: selectedDestinationId,
                     decoration: const InputDecoration(labelText: 'Destination Station'),
                     items: adminProvider.stations.map((station) {
                       return DropdownMenuItem(
@@ -1344,6 +1356,12 @@ class AdminTripsPage extends StatelessWidget {
                     validator: (v) => double.tryParse(v ?? '') == null ? 'Invalid' : null,
                   ),
                   TextFormField(
+                    controller: economicPriceController,
+                    decoration: const InputDecoration(labelText: 'Economic Class Price'),
+                    keyboardType: TextInputType.number,
+                    validator: (v) => double.tryParse(v ?? '') == null ? 'Invalid' : null,
+                  ),
+                  TextFormField(
                     controller: quantitiesController,
                     decoration: const InputDecoration(labelText: 'Quantities'),
                     keyboardType: TextInputType.number,
@@ -1372,6 +1390,7 @@ class AdminTripsPage extends StatelessWidget {
                         arrivalTime: arrivalTime,
                         firstClassPrice: double.parse(firstClassPriceController.text),
                         secondClassPrice: double.parse(secondClassPriceController.text),
+                        economicPrice: double.parse(economicPriceController.text),
                         quantities: int.parse(quantitiesController.text),
                       )
                     : await adminProvider.updateTrip(
@@ -1384,6 +1403,7 @@ class AdminTripsPage extends StatelessWidget {
                         arrivalTime: arrivalTime,
                         firstClassPrice: double.parse(firstClassPriceController.text),
                         secondClassPrice: double.parse(secondClassPriceController.text),
+                        economicPrice: double.parse(economicPriceController.text),
                         quantities: int.parse(quantitiesController.text),
                       );
 
@@ -1406,6 +1426,7 @@ class AdminTripsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<AdminProvider>(
       builder: (context, adminProvider, child) {
+        print('DEBUG UI: Building AdminTripsPage - trips count: ${adminProvider.trips.length}, isLoading: ${adminProvider.isLoadingTrips}');
         return Padding(
           padding: const EdgeInsets.all(24.0),
           child: Column(
@@ -1767,7 +1788,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
           rows: users.map<DataRow>((user) {
             return DataRow(cells: [
               DataCell(Text('#${user['id']}')),
-              DataCell(Text(user['full_name'] ?? 'N/A')),
+              DataCell(Text(user['fullName'] ?? user['full_name'] ?? 'N/A')),
               DataCell(Text(user['email'] ?? 'N/A')),
               DataCell(Text(user['phone'] ?? 'N/A')),
               DataCell(
@@ -1787,9 +1808,9 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                   ),
                 ),
               ),
-              DataCell(Text(user['is_verified'] == true ? '✅' : '❌')),
-              DataCell(Text(user['created_at'] != null 
-                  ? DateFormat('MMM dd, yyyy').format(DateTime.parse(user['created_at']))
+              DataCell(Text((user['isVerified'] ?? user['is_verified']) == true ? '✅' : '❌')),
+              DataCell(Text((user['createdAt'] ?? user['created_at']) != null 
+                  ? DateFormat('MMM dd, yyyy').format(DateTime.parse(user['createdAt'] ?? user['created_at']))
                   : 'N/A')),
             ]);
           }).toList(),

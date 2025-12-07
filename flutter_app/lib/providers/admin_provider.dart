@@ -86,6 +86,7 @@ class AdminProvider with ChangeNotifier {
 
   Future<Map<String, dynamic>> createStation({
     required String name,
+    required String code,
     required String city,
     String? address,
     double? latitude,
@@ -94,6 +95,7 @@ class AdminProvider with ChangeNotifier {
   }) async {
     final response = await _adminService.createStation(
       name: name,
+      code: code,
       city: city,
       address: address,
       latitude: latitude,
@@ -111,6 +113,7 @@ class AdminProvider with ChangeNotifier {
   Future<Map<String, dynamic>> updateStation({
     required int id,
     String? name,
+    String? code,
     String? city,
     String? address,
     double? latitude,
@@ -120,6 +123,7 @@ class AdminProvider with ChangeNotifier {
     final response = await _adminService.updateStation(
       id: id,
       name: name,
+      code: code,
       city: city,
       address: address,
       latitude: latitude,
@@ -306,21 +310,26 @@ class AdminProvider with ChangeNotifier {
   // ============ TRIPS MANAGEMENT ============
 
   Future<void> loadTrips() async {
+    print('DEBUG AdminProvider: Starting loadTrips');
     _isLoadingTrips = true;
     _error = null;
     notifyListeners();
 
     final response = await _adminService.getTrips();
+    print('DEBUG AdminProvider: getTrips response success: ${response['success']}');
 
     _isLoadingTrips = false;
 
     if (response['success']) {
       _trips = response['data'];
+      print('DEBUG AdminProvider: Loaded ${_trips.length} trips into state');
     } else {
       _error = response['message'];
+      print('ERROR AdminProvider: ${response['message']}');
     }
 
     notifyListeners();
+    print('DEBUG AdminProvider: notifyListeners called, trips count: ${_trips.length}');
   }
 
   Future<Map<String, dynamic>> createTrip({
@@ -332,6 +341,7 @@ class AdminProvider with ChangeNotifier {
     required DateTime arrivalTime,
     required double firstClassPrice,
     required double secondClassPrice,
+    required double economicPrice,
     required int quantities,
   }) async {
     final response = await _adminService.createTrip(
@@ -343,6 +353,7 @@ class AdminProvider with ChangeNotifier {
       arrivalTime: arrivalTime,
       firstClassPrice: firstClassPrice,
       secondClassPrice: secondClassPrice,
+      economicPrice: economicPrice,
       quantities: quantities,
     );
 
@@ -363,6 +374,7 @@ class AdminProvider with ChangeNotifier {
     DateTime? arrivalTime,
     double? firstClassPrice,
     double? secondClassPrice,
+    double? economicPrice,
     int? quantities,
   }) async {
     final response = await _adminService.updateTrip(
@@ -375,6 +387,7 @@ class AdminProvider with ChangeNotifier {
       arrivalTime: arrivalTime,
       firstClassPrice: firstClassPrice,
       secondClassPrice: secondClassPrice,
+      economicPrice: economicPrice,
       quantities: quantities,
     );
 

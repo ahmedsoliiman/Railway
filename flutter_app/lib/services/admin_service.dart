@@ -87,6 +87,7 @@ class AdminService {
 
   Future<Map<String, dynamic>> createStation({
     required String name,
+    required String code,
     required String city,
     String? address,
     double? latitude,
@@ -100,6 +101,7 @@ class AdminService {
         headers: headers,
         body: json.encode({
           'name': name,
+          'code': code,
           'city': city,
           'address': address,
           'latitude': latitude,
@@ -133,6 +135,7 @@ class AdminService {
   Future<Map<String, dynamic>> updateStation({
     required int id,
     String? name,
+    String? code,
     String? city,
     String? address,
     double? latitude,
@@ -146,6 +149,7 @@ class AdminService {
         headers: headers,
         body: json.encode({
           if (name != null) 'name': name,
+          if (code != null) 'code': code,
           if (city != null) 'city': city,
           if (address != null) 'address': address,
           if (latitude != null) 'latitude': latitude,
@@ -365,7 +369,7 @@ class AdminService {
         Uri.parse('${AppConfig.baseUrl}/admin/trains'),
         headers: headers,
         body: json.encode({
-          'train_number': trainNumber,
+          'trainNumber': trainNumber,
           'name': name,
           'type': type,
           'carriages': carriages,
@@ -411,7 +415,7 @@ class AdminService {
         Uri.parse('${AppConfig.baseUrl}/admin/trains/$id'),
         headers: headers,
         body: json.encode({
-          if (trainNumber != null) 'train_number': trainNumber,
+          if (trainNumber != null) 'trainNumber': trainNumber,
           if (name != null) 'name': name,
           if (type != null) 'type': type,
           if (carriages != null) 'carriages': carriages,
@@ -485,14 +489,33 @@ class AdminService {
       
       if (response.statusCode == 200 && data['success']) {
         final List<dynamic> tripsJson = data['data'];
-        final trips = tripsJson
-            .map((t) => Trip.fromJson(t))
-            .toList();
+        print('DEBUG: Fetched ${tripsJson.length} trips from API');
         
-        return {
-          'success': true,
-          'data': trips,
-        };
+        try {
+          final trips = tripsJson
+              .map((t) {
+                try {
+                  return Trip.fromJson(t);
+                } catch (parseError) {
+                  print('ERROR parsing trip: $parseError');
+                  print('Trip data: $t');
+                  rethrow;
+                }
+              })
+              .toList();
+          
+          print('DEBUG: Successfully parsed ${trips.length} trips');
+          return {
+            'success': true,
+            'data': trips,
+          };
+        } catch (parseError) {
+          print('ERROR during trips parsing: $parseError');
+          return {
+            'success': false,
+            'message': 'Failed to parse trips: ${parseError.toString()}',
+          };
+        }
       } else {
         return {
           'success': false,
@@ -500,6 +523,7 @@ class AdminService {
         };
       }
     } catch (e) {
+      print('ERROR fetching trips: $e');
       return {
         'success': false,
         'message': 'Network error: ${e.toString()}',
@@ -516,6 +540,7 @@ class AdminService {
     required DateTime arrivalTime,
     required double firstClassPrice,
     required double secondClassPrice,
+    required double economicPrice,
     required int quantities,
   }) async {
     try {
@@ -524,14 +549,15 @@ class AdminService {
         Uri.parse('${AppConfig.baseUrl}/admin/trips'),
         headers: headers,
         body: json.encode({
-          'train_id': trainId,
-          'origin_station_id': originStationId,
-          'destination_station_id': destinationStationId,
+          'trainId': trainId,
+          'originStationId': originStationId,
+          'destinationStationId': destinationStationId,
           'departure': departure.toIso8601String().split('T')[0],
-          'departure_time': departureTime.toIso8601String(),
-          'arrival_time': arrivalTime.toIso8601String(),
-          'first_class_price': firstClassPrice,
-          'second_class_price': secondClassPrice,
+          'departureTime': departureTime.toIso8601String(),
+          'arrivalTime': arrivalTime.toIso8601String(),
+          'firstClassPrice': firstClassPrice,
+          'secondClassPrice': secondClassPrice,
+          'economicPrice': economicPrice,
           'quantities': quantities,
         }),
       );
@@ -578,6 +604,7 @@ class AdminService {
     DateTime? departureTime,
     DateTime? arrivalTime,
     double? firstClassPrice,
+    double? economicPrice,
     double? secondClassPrice,
     int? quantities,
   }) async {
@@ -587,14 +614,16 @@ class AdminService {
         Uri.parse('${AppConfig.baseUrl}/admin/trips/$id'),
         headers: headers,
         body: json.encode({
-          if (trainId != null) 'train_id': trainId,
-          if (originStationId != null) 'origin_station_id': originStationId,
-          if (destinationStationId != null) 'destination_station_id': destinationStationId,
+          if (trainId != null) 'trainId': trainId,
+          if (originStationId != null) 'originStationId': originStationId,
+          if (destinationStationId != null) 'destinationStationId': destinationStationId,
           if (departure != null) 'departure': departure.toIso8601String().split('T')[0],
-          if (departureTime != null) 'departure_time': departureTime.toIso8601String(),
-          if (arrivalTime != null) 'arrival_time': arrivalTime.toIso8601String(),
-          if (firstClassPrice != null) 'first_class_price': firstClassPrice,
-          if (secondClassPrice != null) 'second_class_price': secondClassPrice,
+          if (departureTime != null) 'departureTime': departureTime.toIso8601String(),
+          if (arrivalTime != null) 'arrivalTime': arrivalTime.toIso8601String(),
+          if (firstClassPrice != null) 'firstClassPrice': firstClassPrice,
+          if (secondClassPrice != null) 'secondClassPrice': secondClassPrice,
+          if (economicPrice != null) 'economicPrice': economicPrice,
+          if (quantities != null) 'quantities': quantities,
           if (quantities != null) 'quantities': quantities,
         }),
       );
@@ -676,7 +705,7 @@ class AdminService {
       if (response.statusCode == 200 && data['success']) {
         return {
           'success': true,
-          'data': data['data']['users'],
+          'data': data['data'],
         };
       } else {
         return {
@@ -707,7 +736,7 @@ class AdminService {
       if (response.statusCode == 200 && data['success']) {
         return {
           'success': true,
-          'data': data['data']['reservations'],
+          'data': data['data'],
         };
       } else {
         return {
