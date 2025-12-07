@@ -190,7 +190,7 @@ class ApiService {
 
       final data = jsonDecode(response.body);
       if (data['success'] && data['data'] != null) {
-        final List tripsJson = data['data']['trips'];
+        final List tripsJson = data['data'];
         return tripsJson.map((json) => Trip.fromJson(json)).toList();
       }
       return [];
@@ -210,7 +210,7 @@ class ApiService {
 
       final data = jsonDecode(response.body);
       if (data['success'] && data['data'] != null) {
-        return Trip.fromJson(data['data']['trip']);
+        return Trip.fromJson(data['data']);
       }
       return null;
     } catch (e) {
@@ -229,7 +229,7 @@ class ApiService {
       );
 
       final data = jsonDecode(response.body);
-      if (data['success'] && data['data'] != null) {
+      if (data['success'] && data['data'] != null && data['data']['stations'] != null) {
         final List stationsJson = data['data']['stations'];
         return stationsJson.map((json) => Station.fromJson(json)).toList();
       }
@@ -274,7 +274,7 @@ class ApiService {
 
       final data = jsonDecode(response.body);
       if (data['success'] && data['data'] != null) {
-        final List reservationsJson = data['data']['reservations'];
+        final List reservationsJson = data['data'];
         return reservationsJson.map((json) => Reservation.fromJson(json)).toList();
       }
       return [];
@@ -294,7 +294,7 @@ class ApiService {
 
       final data = jsonDecode(response.body);
       if (data['success'] && data['data'] != null) {
-        return Reservation.fromJson(data['data']['reservation']);
+        return Reservation.fromJson(data['data']);
       }
       return null;
     } catch (e) {

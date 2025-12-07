@@ -58,15 +58,15 @@ class Trip {
     
     return Trip(
       id: json['id'],
-      trainId: json['trainId'] ?? json['train_id'],
+      trainId: json['trainId'] ?? json['train_id'] ?? trainData?['id'] ?? 0,
       trainName: trainData?['name'] ?? json['train_name'] ?? '',
-      trainNumber: trainData?['trainNumber'] ?? json['train_number'] ?? '',
+      trainNumber: trainData?['trainNumber'] ?? trainData?['train_number'] ?? json['train_number'] ?? '',
       trainType: trainData?['type'] ?? json['train_type'] ?? 'Standard',
       trainFacilities: trainData?['facilities'] ?? json['train_facilities'],
-      originStationId: json['originStationId'] ?? json['origin_station_id'],
+      originStationId: json['originStationId'] ?? json['origin_station_id'] ?? departureStationData?['id'] ?? 0,
       originName: departureStationData?['name'] ?? json['origin_name'] ?? '',
       originCity: departureStationData?['city'] ?? json['origin_city'] ?? '',
-      destinationStationId: json['destinationStationId'] ?? json['destination_station_id'],
+      destinationStationId: json['destinationStationId'] ?? json['destination_station_id'] ?? arrivalStationData?['id'] ?? 0,
       destinationName: arrivalStationData?['name'] ?? json['destination_name'] ?? '',
       destinationCity: arrivalStationData?['city'] ?? json['destination_city'] ?? '',
       departure: departure,
@@ -81,7 +81,7 @@ class Trip {
       economicPrice: (json['economicPrice'] ?? json['economic_price']) != null 
           ? double.parse((json['economicPrice'] ?? json['economic_price']).toString()) 
           : null,
-      quantities: json['quantities'] ?? 0,
+      quantities: json['quantities'] ?? json['availableSeats'] ?? json['available_seats'] ?? 0,
     );
   }
 

@@ -105,7 +105,7 @@ For testing, you can register a new user or use:
 
 Admin Dashboard: http://localhost:3000/admin
 - Email: admin@trainbooking.com
-- Password: Admin@123
+- Password: password123
 
 ## Screenshots
 
