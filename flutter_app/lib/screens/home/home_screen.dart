@@ -60,6 +60,28 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _searchTrips() async {
+    // Validate that from and to are selected
+    if (_selectedOriginId == null || _selectedDestinationId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select both origin and destination stations'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Validate that from and to are different
+    if (_selectedOriginId == _selectedDestinationId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Origin and destination must be different'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     final tripProvider = Provider.of<TripProvider>(context, listen: false);
     
     await tripProvider.loadTrips(
@@ -70,7 +92,17 @@ class _HomeScreenState extends State<HomeScreen> {
     );
     
     if (mounted) {
-      Navigator.pushNamed(context, '/trips');
+      // Check if any trips were found
+      if (tripProvider.trips.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No trips found for the selected route'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      } else {
+        Navigator.pushNamed(context, '/trips');
+      }
     }
   }
 

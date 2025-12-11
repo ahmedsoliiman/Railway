@@ -72,6 +72,15 @@ class TripProvider with ChangeNotifier {
         trainType: trainType,
       );
       
+      // Additional client-side filtering to ensure exact matches
+      if (originStationId != null || destinationStationId != null) {
+        _trips = _trips.where((trip) {
+          bool matchesOrigin = originStationId == null || trip.originStationId == originStationId;
+          bool matchesDestination = destinationStationId == null || trip.destinationStationId == destinationStationId;
+          return matchesOrigin && matchesDestination;
+        }).toList();
+      }
+      
       // Filter by seat class if specified (frontend filtering)
       if (seatClass != null) {
         _trips = _trips.where((trip) {
