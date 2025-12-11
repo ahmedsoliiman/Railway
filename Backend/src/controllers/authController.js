@@ -113,14 +113,21 @@ exports.login = async (req, res) => {
     // Check if user exists
     const user = await User.findOne({ where: { email } });
     if (!user) {
+      console.log('❌ User not found for email:', email);
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password',
       });
     }
 
+    console.log('✅ User found:', { email: user.email, id: user.id, hasPassword: !!user.password });
+    console.log('🔑 Provided password:', password);
+    console.log('🔒 Stored hash:', user.password);
+
     // Check password
     const isMatch = await bcrypt.compare(password, user.password);
+    console.log('🔐 Password match result:', isMatch);
+    
     if (!isMatch) {
       return res.status(401).json({
         success: false,
@@ -481,7 +488,7 @@ exports.resetPassword = async (req, res) => {
 
     // Update password and clear reset token
     await user.update({
-      password_hash: passwordHash,
+      password: passwordHash,
       verification_token: null,
       verification_token_expires: null,
     });

@@ -1,5 +1,6 @@
 const { Reservation, Trip, Train, Station, User, sequelize } = require('../models');
 const crypto = require('crypto');
+const emailService = require('../utils/emailService');
 
 // Generate booking reference
 const generateBookingReference = () => {
@@ -172,6 +173,25 @@ exports.createReservation = async (req, res) => {
         },
       ],
     });
+
+    // Send confirmation email
+    try {
+      const user = await User.findByPk(req.user.id);
+      await emailService.sendBookingConfirmation(user.email, user.full_name, {
+        reference: completeReservation.booking_reference,
+        trainName: completeReservation.trip.train.name,
+        trainNumber: completeReservation.trip.train.train_number,
+        from: completeReservation.trip.departureStation.name,
+        to: completeReservation.trip.arrivalStation.name,
+        departureTime: new Date(completeReservation.trip.departure_time).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }),
+        arrivalTime: new Date(completeReservation.trip.arrival_time).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }),
+        seatClass: completeReservation.seat_class,
+        seats: completeReservation.number_of_seats,
+        totalPrice: parseFloat(completeReservation.total_price),
+      });
+    } catch (emailError) {
+      console.error('Failed to send booking confirmation email:', emailError);
+    }
 
     res.status(201).json({
       success: true,
@@ -434,9 +454,16 @@ exports.cancelReservation = async (req, res) => {
 
     await t.commit();
 
+    // Calculate refund (100% refund if cancelled)
+    const refundAmount = parseFloat(reservation.total_price);
+
     res.json({
       success: true,
-      message: 'Reservation cancelled successfully',
+      message: `Reservation cancelled successfully. Refund of $${refundAmount.toFixed(2)} will be processed within 5-7 business days.`,
+      data: {
+        refundAmount: refundAmount,
+        bookingReference: reservation.booking_reference,
+      },
     });
   } catch (error) {
     await t.rollback();

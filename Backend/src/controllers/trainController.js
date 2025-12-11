@@ -252,8 +252,8 @@ exports.updateTrain = async (req, res) => {
 
     // Update carriages if provided
     if (carriages && carriages.length > 0) {
-      // Validate carriages
-      const carriageIds = carriages.map(c => c.carriage_id);
+      // Validate carriages (accept both camelCase and snake_case)
+      const carriageIds = carriages.map(c => c.carriageId || c.carriage_id);
       const foundCarriages = await Carriage.findAll({
         where: { id: carriageIds },
       });
@@ -272,7 +272,8 @@ exports.updateTrain = async (req, res) => {
       let secondClassSeats = 0;
 
       for (const carriageInput of carriages) {
-        const carriage = foundCarriages.find(c => c.id === carriageInput.carriage_id);
+        const carriageId = carriageInput.carriageId || carriageInput.carriage_id;
+        const carriage = foundCarriages.find(c => c.id === carriageId);
         const quantity = carriageInput.quantity || 1;
         const seats = carriage.seats_count * quantity;
 
@@ -305,7 +306,7 @@ exports.updateTrain = async (req, res) => {
         await TrainCarriage.create(
           {
             train_id: id,
-            carriage_id: carriageInput.carriage_id,
+            carriage_id: carriageInput.carriageId || carriageInput.carriage_id,
             quantity: carriageInput.quantity || 1,
           },
           { transaction: t }

@@ -6,13 +6,22 @@ const { Op } = require('sequelize');
 // @access  Public
 exports.getAllTrips = async (req, res) => {
   try {
-    const { from_station, to_station, date, seat_class } = req.query;
+    const { from_station, to_station, date, seat_class, originId, destinationId } = req.query;
 
     const where = {};
 
-    // Filter by stations
-    if (from_station) where.origin_station_id = from_station;
-    if (to_station) where.destination_station_id = to_station;
+    // Filter by stations - accept both naming conventions
+    const fromStation = from_station || originId;
+    const toStation = to_station || destinationId;
+    
+    if (fromStation) {
+      where.origin_station_id = parseInt(fromStation);
+      console.log('🔍 Filtering by origin station:', fromStation);
+    }
+    if (toStation) {
+      where.destination_station_id = parseInt(toStation);
+      console.log('🔍 Filtering by destination station:', toStation);
+    }
 
     // Filter by date and future departure
     if (date) {
@@ -28,6 +37,7 @@ exports.getAllTrips = async (req, res) => {
           { [Op.gt]: new Date() }
         ]
       };
+      console.log('🔍 Filtering by date:', date);
     } else {
       // No specific date, just show future trips
       where.departure_time = {
@@ -141,18 +151,15 @@ exports.getTripById = async (req, res) => {
         id: trip.id,
         departureTime: trip.departure_time,
         arrivalTime: trip.arrival_time,
-        firstClassPrice: parseFloat(trip.first_class_price),
-        secondClassPrice: parseFloat(trip.second_class_price),
-        availableFirstClassSeats: trip.available_first_class_seats,
-        availableSecondClassSeats: trip.available_second_class_seats,
+        firstClassPrice: parseFloat(trip.first_class_price || 0),
+        secondClassPrice: parseFloat(trip.second_class_price || 0),
+        quantities: trip.quantities, // Available seats
+        availableSeats: trip.quantities, // For compatibility
         train: {
           id: trip.train.id,
           trainNumber: trip.train.train_number,
           name: trip.train.name,
           type: trip.train.type,
-          totalSeats: trip.train.total_seats,
-          firstClassSeats: trip.train.first_class_seats,
-          secondClassSeats: trip.train.second_class_seats,
           facilities: trip.train.facilities,
         },
         departureStation: {

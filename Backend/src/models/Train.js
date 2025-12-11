@@ -19,6 +19,12 @@ const Train = sequelize.define('Train', {
   type: {
     type: DataTypes.STRING(50),
     allowNull: false,
+    validate: {
+      isIn: {
+        args: [['express', 'ordinary', 'VIP', 'tahya masr', 'sleeper']],
+        msg: 'Train type must be one of: express, ordinary, VIP, tahya masr, sleeper'
+      }
+    }
   },
   total_seats: {
     type: DataTypes.INTEGER,
@@ -39,6 +45,12 @@ const Train = sequelize.define('Train', {
   status: {
     type: DataTypes.STRING(20),
     defaultValue: 'active',
+    validate: {
+      isIn: {
+        args: [['active', 'maintenance', 'retired']],
+        msg: 'Status must be one of: active, maintenance, retired'
+      }
+    }
   },
   created_at: {
     type: DataTypes.DATE,

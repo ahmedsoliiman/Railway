@@ -51,7 +51,7 @@ CREATE TABLE trains (
     id SERIAL PRIMARY KEY,
     train_number VARCHAR(50) UNIQUE NOT NULL,
     name VARCHAR(100) NOT NULL,
-    type VARCHAR(50) CHECK (type IN ('express', 'premium', 'standard')),
+    type VARCHAR(50) CHECK (type IN ('express', 'ordinary', 'VIP', 'tahya masr', 'sleeper')),
     total_seats INTEGER NOT NULL,
     first_class_seats INTEGER DEFAULT 0,
     second_class_seats INTEGER DEFAULT 0,
