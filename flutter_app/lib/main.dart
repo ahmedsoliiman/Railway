@@ -15,6 +15,8 @@ import 'screens/home/home_screen.dart';
 import 'screens/trips/trips_screen.dart';
 import 'screens/trips/trip_detail_screen.dart';
 import 'screens/booking/booking_screen.dart';
+import 'screens/booking/payment_screen.dart';
+import 'screens/booking/ticket_screen.dart';
 import 'screens/booking/my_bookings_screen.dart';
 import 'screens/profile/profile_screen.dart';
 import 'screens/admin/admin_dashboard_screen.dart';
@@ -51,6 +53,8 @@ class MyApp extends StatelessWidget {
           '/trips': (context) => const TripsScreen(),
           '/trip-detail': (context) => const TripDetailScreen(),
           '/booking': (context) => const BookingScreen(),
+          '/payment': (context) => const PaymentScreen(),
+          '/ticket': (context) => const TicketScreen(),
           '/my-bookings': (context) => const MyBookingsScreen(),
           '/profile': (context) => const ProfileScreen(),
           '/admin': (context) => const AdminDashboardScreen(),

@@ -174,14 +174,16 @@ class ApiService {
       var url = '${AppConfig.baseUrl}${AppConfig.tripsEndpoint}';
       
       final queryParams = <String>[];
-      if (originId != null) queryParams.add('origin=$originId');
-      if (destinationId != null) queryParams.add('destination=$destinationId');
+      if (originId != null) queryParams.add('originId=$originId');
+      if (destinationId != null) queryParams.add('destinationId=$destinationId');
       if (date != null) queryParams.add('date=$date');
       if (trainType != null) queryParams.add('train_type=$trainType');
       
       if (queryParams.isNotEmpty) {
         url += '?${queryParams.join('&')}';
       }
+
+      print('🔍 Fetching trips with URL: $url'); // Debug log
 
       final response = await http.get(
         Uri.parse(url),
@@ -191,6 +193,7 @@ class ApiService {
       final data = jsonDecode(response.body);
       if (data['success'] && data['data'] != null) {
         final List tripsJson = data['data'];
+        print('✅ Found ${tripsJson.length} trips'); // Debug log
         return tripsJson.map((json) => Trip.fromJson(json)).toList();
       }
       return [];

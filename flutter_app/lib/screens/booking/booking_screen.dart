@@ -13,7 +13,6 @@ class BookingScreen extends StatefulWidget {
 class _BookingScreenState extends State<BookingScreen> {
   String _selectedClass = 'First';
   int _numberOfSeats = 1;
-  bool _isProcessing = false;
 
   @override
   void didChangeDependencies() {
@@ -28,65 +27,38 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   Future<void> _handleBooking() async {
-    setState(() => _isProcessing = true);
-
     final tripProvider = Provider.of<TripProvider>(context, listen: false);
     final trip = tripProvider.selectedTrip!;
 
-    final response = await tripProvider.createReservation(
-      tripId: trip.id,
-      seatClass: _selectedClass.toLowerCase(), // Convert to lowercase for backend
-      numberOfSeats: _numberOfSeats,
+    final pricePerSeat = _selectedClass == 'First' 
+        ? (trip.firstClassPrice ?? 0) 
+        : (trip.secondClassPrice ?? 0);
+    final totalPrice = pricePerSeat * _numberOfSeats;
+
+    // Navigate to payment screen
+    Navigator.pushNamed(
+      context,
+      '/payment',
+      arguments: {
+        'tripId': trip.id,
+        'seatClass': _selectedClass,
+        'numberOfSeats': _numberOfSeats,
+        'pricePerSeat': pricePerSeat,
+        'totalPrice': totalPrice,
+        'trip': {
+          'id': trip.id,
+          'trainName': trip.trainName,
+          'trainNumber': trip.trainNumber,
+          'trainType': trip.trainType,
+          'origin': trip.originName,
+          'destination': trip.destinationName,
+          'originCity': trip.originCity,
+          'destinationCity': trip.destinationCity,
+          'departureTime': trip.departureTime.toIso8601String(),
+          'arrivalTime': trip.arrivalTime.toIso8601String(),
+        },
+      },
     );
-
-    setState(() => _isProcessing = false);
-
-    if (!mounted) return;
-
-    if (response['success'] == true) {
-      final bookingRef = response['data']['reservation']['booking_reference'] ?? 
-                        response['data']['booking_reference'] ?? 
-                        'N/A';
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          icon: const Icon(Icons.check_circle, color: AppTheme.successColor, size: 64),
-          title: const Text('Booking Confirmed!'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Reference: $bookingRef'),
-              const SizedBox(height: 8),
-              const Text('Check your email for details.'),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
-              },
-              child: const Text('Go to Home'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                Navigator.pushReplacementNamed(context, '/my-bookings');
-              },
-              child: const Text('View Bookings'),
-            ),
-          ],
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(response['message'] ?? 'Booking failed'),
-          backgroundColor: AppTheme.dangerColor,
-        ),
-      );
-    }
   }
 
   @override
@@ -263,17 +235,8 @@ class _BookingScreenState extends State<BookingScreen> {
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: ElevatedButton(
-            onPressed: _isProcessing ? null : _handleBooking,
-            child: _isProcessing
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  )
-                : const Text('Confirm Booking'),
+            onPressed: _handleBooking,
+            child: const Text('Continue to Payment'),
           ),
         ),
       ),

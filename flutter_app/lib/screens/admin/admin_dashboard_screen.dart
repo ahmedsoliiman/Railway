@@ -455,23 +455,28 @@ class AdminStationsPage extends StatelessWidget {
                 }
 
                 return Card(
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: DataTable(
-                      columns: const [
-                        DataColumn(label: Text('Name')),
-                        DataColumn(label: Text('City')),
-                        DataColumn(label: Text('Address')),
-                        DataColumn(label: Text('Facilities')),
-                        DataColumn(label: Text('Actions')),
-                      ],
-                      rows: adminProvider.stations.map((station) {
-                        return DataRow(cells: [
-                          DataCell(Text(station.name)),
-                          DataCell(Text(station.city)),
-                          DataCell(Text(station.address ?? 'N/A')),
-                          DataCell(Text(station.facilities ?? 'N/A')),
-                          DataCell(Row(
+                  child: Container(
+                    constraints: BoxConstraints(
+                      maxHeight: MediaQuery.of(context).size.height * 0.6,
+                    ),
+                    child: SingleChildScrollView(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: DataTable(
+                          columns: const [
+                            DataColumn(label: Text('Name')),
+                            DataColumn(label: Text('City')),
+                            DataColumn(label: Text('Address')),
+                            DataColumn(label: Text('Facilities')),
+                            DataColumn(label: Text('Actions')),
+                          ],
+                          rows: adminProvider.stations.map((station) {
+                            return DataRow(cells: [
+                              DataCell(Text(station.name)),
+                              DataCell(Text(station.city)),
+                              DataCell(Text(station.address ?? 'N/A')),
+                              DataCell(Text(station.facilities ?? 'N/A')),
+                              DataCell(Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               IconButton(
@@ -513,7 +518,9 @@ class AdminStationsPage extends StatelessWidget {
                             ],
                           )),
                         ]);
-                      }).toList(),
+                          }).toList(),
+                        ),
+                      ),
                     ),
                   ),
                 );
@@ -719,15 +726,20 @@ class AdminCarriagesPage extends StatelessWidget {
 
                 return Card(
                   elevation: 2,
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: DataTable(
-                      headingRowColor: WidgetStateProperty.all(Colors.grey[100]),
-                      columns: const [
-                        DataColumn(label: Text('ID', style: TextStyle(fontWeight: FontWeight.bold))),
-                        DataColumn(label: Text('Name', style: TextStyle(fontWeight: FontWeight.bold))),
-                        DataColumn(label: Text('Class Type', style: TextStyle(fontWeight: FontWeight.bold))),
-                        DataColumn(label: Text('Seats', style: TextStyle(fontWeight: FontWeight.bold))),
+                  child: Container(
+                    constraints: BoxConstraints(
+                      maxHeight: MediaQuery.of(context).size.height * 0.6,
+                    ),
+                    child: SingleChildScrollView(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: DataTable(
+                          headingRowColor: WidgetStateProperty.all(Colors.grey[100]),
+                          columns: const [
+                            DataColumn(label: Text('ID', style: TextStyle(fontWeight: FontWeight.bold))),
+                            DataColumn(label: Text('Name', style: TextStyle(fontWeight: FontWeight.bold))),
+                            DataColumn(label: Text('Class Type', style: TextStyle(fontWeight: FontWeight.bold))),
+                            DataColumn(label: Text('Seats', style: TextStyle(fontWeight: FontWeight.bold))),
                         DataColumn(label: Text('Model', style: TextStyle(fontWeight: FontWeight.bold))),
                         DataColumn(label: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold))),
                       ],
@@ -819,6 +831,8 @@ class AdminCarriagesPage extends StatelessWidget {
                         ]);
                       }).toList(),
                     ),
+                      ),
+                    ),
                   ),
                 );
               },
@@ -838,7 +852,7 @@ class AdminTrainsPage extends StatelessWidget {
     final trainNumberController = TextEditingController(text: train?.trainNumber);
     final nameController = TextEditingController(text: train?.name);
     final facilitiesController = TextEditingController(text: train?.facilities);
-    String selectedType = train?.type ?? 'Standard';
+    String selectedType = train?.type ?? 'express';
     String selectedStatus = train?.status ?? 'active';
     final formKey = GlobalKey<FormState>();
     
@@ -846,6 +860,7 @@ class AdminTrainsPage extends StatelessWidget {
     
     // Selected carriages: Map<carriageId, quantity>
     Map<int, int> selectedCarriages = {};
+    int? selectedCarriageToAdd; // Track the dropdown selection
     if (train?.carriages != null) {
       for (var tc in train!.carriages!) {
         selectedCarriages[tc.carriageId] = tc.quantity;
@@ -898,9 +913,11 @@ class AdminTrainsPage extends StatelessWidget {
                   label: 'Train Type *',
                   icon: Icons.category,
                   items: [
-                    const DropdownMenuItem(value: 'Premium', child: Text('Premium (Luxury)')),
-                    const DropdownMenuItem(value: 'Express', child: Text('Express (Fast)')),
-                    const DropdownMenuItem(value: 'Standard', child: Text('Standard (Economic)')),
+                    const DropdownMenuItem(value: 'express', child: Text('Express')),
+                    const DropdownMenuItem(value: 'ordinary', child: Text('Ordinary')),
+                    const DropdownMenuItem(value: 'VIP', child: Text('VIP')),
+                    const DropdownMenuItem(value: 'tahya masr', child: Text('Tahya Masr')),
+                    const DropdownMenuItem(value: 'sleeper', child: Text('Sleeper')),
                   ],
                   onChanged: (value) => setState(() => selectedType = value!),
                 ),
@@ -976,23 +993,31 @@ class AdminTrainsPage extends StatelessWidget {
                         }).toList(),
                         if (adminProvider.carriages.where((c) => !selectedCarriages.containsKey(c.id)).isNotEmpty)
                           DropdownButtonFormField<int>(
+                            key: ValueKey(selectedCarriages.length),
+                            value: selectedCarriageToAdd,
                             decoration: const InputDecoration(
                               labelText: 'Add Carriage',
                               border: OutlineInputBorder(),
                             ),
-                            items: adminProvider.carriages
-                                .where((c) => !selectedCarriages.containsKey(c.id))
-                                .map((c) => DropdownMenuItem(
-                                      value: c.id,
-                                      child: Text('${c.name} (${c.classTypeDisplay}, ${c.seatsCount} seats)'),
-                                    ))
-                                .toList(),
+                            items: [
+                              const DropdownMenuItem<int>(
+                                value: null,
+                                child: Text('Select a carriage'),
+                              ),
+                              ...adminProvider.carriages
+                                  .where((c) => !selectedCarriages.containsKey(c.id))
+                                  .map((c) => DropdownMenuItem(
+                                        value: c.id,
+                                        child: Text('${c.name} (${c.classTypeDisplay}, ${c.seatsCount} seats)'),
+                                      ))
+                            ],
                             onChanged: (carriageId) {
-                              if (carriageId != null) {
-                                setState(() {
+                              setState(() {
+                                selectedCarriageToAdd = null; // Reset FIRST to avoid duplicate value error
+                                if (carriageId != null) {
                                   selectedCarriages[carriageId] = 1;
-                                });
-                              }
+                                }
+                              });
                             },
                           ),
                         if (selectedCarriages.isEmpty)
@@ -1136,14 +1161,19 @@ class AdminTrainsPage extends StatelessWidget {
                 }
 
                 return Card(
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: DataTable(
-                      columns: const [
-                        DataColumn(label: Text('Number')),
-                        DataColumn(label: Text('Name')),
-                        DataColumn(label: Text('Type')),
-                        DataColumn(label: Text('Total Seats')),
+                  child: Container(
+                    constraints: BoxConstraints(
+                      maxHeight: MediaQuery.of(context).size.height * 0.6,
+                    ),
+                    child: SingleChildScrollView(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: DataTable(
+                          columns: const [
+                            DataColumn(label: Text('Number')),
+                            DataColumn(label: Text('Name')),
+                            DataColumn(label: Text('Type')),
+                            DataColumn(label: Text('Total Seats')),
                         DataColumn(label: Text('First Class')),
                         DataColumn(label: Text('Second Class')),
                         DataColumn(label: Text('Status')),
@@ -1201,6 +1231,8 @@ class AdminTrainsPage extends StatelessWidget {
                           )),
                         ]);
                       }).toList(),
+                    ),
+                      ),
                     ),
                   ),
                 );
@@ -1455,15 +1487,20 @@ class AdminTripsPage extends StatelessWidget {
                     : adminProvider.trips.isEmpty
                         ? const Center(child: Text('No trips yet'))
                         : Card(
-                            child: SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: DataTable(
-                                columns: const [
-                                  DataColumn(label: Text('Train')),
-                                  DataColumn(label: Text('Route')),
-                                  DataColumn(label: Text('Departure Date')),
-                                  DataColumn(label: Text('Departure Time')),
-                                  DataColumn(label: Text('1st Class')),
+                            child: Container(
+                              constraints: BoxConstraints(
+                                maxHeight: MediaQuery.of(context).size.height * 0.6,
+                              ),
+                              child: SingleChildScrollView(
+                                child: SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: DataTable(
+                                    columns: const [
+                                      DataColumn(label: Text('Train')),
+                                      DataColumn(label: Text('Route')),
+                                      DataColumn(label: Text('Departure Date')),
+                                      DataColumn(label: Text('Departure Time')),
+                                      DataColumn(label: Text('1st Class')),
                                   DataColumn(label: Text('2nd Class')),
                                   DataColumn(label: Text('Quantities')),
                                   DataColumn(label: Text('Actions')),
@@ -1521,6 +1558,8 @@ class AdminTripsPage extends StatelessWidget {
                                   ]);
                                 }).toList(),
                               ),
+                                ),
+                              ),
                             ),
                           ),
               ),
@@ -1530,6 +1569,131 @@ class AdminTripsPage extends StatelessWidget {
       },
     );
   }
+}
+
+// Edit Departure Time Dialog
+void _showEditDepartureTimeDialog(BuildContext context, Trip trip, AdminProvider adminProvider) {
+  TimeOfDay departureTime = TimeOfDay.fromDateTime(trip.departureTime);
+  TimeOfDay arrivalTime = TimeOfDay.fromDateTime(trip.arrivalTime);
+
+  showDialog(
+    context: context,
+    builder: (context) => StatefulBuilder(
+      builder: (context, setState) => EnhancedDialog(
+        title: 'Edit Departure Times',
+        subtitle: '${trip.trainName} - ${trip.originCity} → ${trip.destinationCity}',
+        icon: Icons.access_time,
+        headerGradient: LinearGradient(
+          colors: [Colors.blue.shade600, Colors.blue.shade800],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.departure_board, color: AppTheme.primaryColor),
+              title: const Text('Departure Time'),
+              subtitle: Text(
+                '${departureTime.hour.toString().padLeft(2, '0')}:${departureTime.minute.toString().padLeft(2, '0')}',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              trailing: ElevatedButton.icon(
+                onPressed: () async {
+                  final time = await showTimePicker(
+                    context: context,
+                    initialTime: departureTime,
+                  );
+                  if (time != null) {
+                    setState(() => departureTime = time);
+                  }
+                },
+                icon: const Icon(Icons.edit, size: 16),
+                label: const Text('Change'),
+              ),
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.location_on, color: Colors.green),
+              title: const Text('Arrival Time'),
+              subtitle: Text(
+                '${arrivalTime.hour.toString().padLeft(2, '0')}:${arrivalTime.minute.toString().padLeft(2, '0')}',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              trailing: ElevatedButton.icon(
+                onPressed: () async {
+                  final time = await showTimePicker(
+                    context: context,
+                    initialTime: arrivalTime,
+                  );
+                  if (time != null) {
+                    setState(() => arrivalTime = time);
+                  }
+                },
+                icon: const Icon(Icons.edit, size: 16),
+                label: const Text('Change'),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () async {
+              // Create new DateTime objects with updated times
+              final newDepartureTime = DateTime(
+                trip.departureTime.year,
+                trip.departureTime.month,
+                trip.departureTime.day,
+                departureTime.hour,
+                departureTime.minute,
+              );
+
+              final newArrivalTime = DateTime(
+                trip.arrivalTime.year,
+                trip.arrivalTime.month,
+                trip.arrivalTime.day,
+                arrivalTime.hour,
+                arrivalTime.minute,
+              );
+
+              // Validate that arrival is after departure
+              if (newArrivalTime.isBefore(newDepartureTime) || newArrivalTime.isAtSameMomentAs(newDepartureTime)) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Arrival time must be after departure time'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
+              }
+
+              Navigator.pop(context);
+
+              final response = await adminProvider.updateTrip(
+                id: trip.id,
+                departureTime: newDepartureTime,
+                arrivalTime: newArrivalTime,
+              );
+
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(response['message'] ?? 'Success'),
+                    backgroundColor: response['success'] ? Colors.green : Colors.red,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
+            icon: const Icon(Icons.check),
+            label: const Text('Update Times'),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 // Departures Management Page
@@ -1568,19 +1732,25 @@ class AdminDeparturesPage extends StatelessWidget {
                     : adminProvider.trips.isEmpty
                         ? const Center(child: Text('No trips scheduled'))
                         : Card(
-                            child: SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: DataTable(
-                                columns: const [
-                                  DataColumn(label: Text('Departure Date')),
-                                  DataColumn(label: Text('Departure Time')),
-                                  DataColumn(label: Text('Train')),
-                                  DataColumn(label: Text('Route')),
-                                  DataColumn(label: Text('Arrival Time')),
-                                  DataColumn(label: Text('Duration')),
-                                  DataColumn(label: Text('Quantities')),
-                                  DataColumn(label: Text('Status')),
-                                ],
+                            child: Container(
+                              constraints: BoxConstraints(
+                                maxHeight: MediaQuery.of(context).size.height * 0.6,
+                              ),
+                              child: SingleChildScrollView(
+                                child: SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: DataTable(
+                                    columns: const [
+                                      DataColumn(label: Text('Departure Date')),
+                                      DataColumn(label: Text('Departure Time')),
+                                      DataColumn(label: Text('Train')),
+                                      DataColumn(label: Text('Route')),
+                                      DataColumn(label: Text('Arrival Time')),
+                                      DataColumn(label: Text('Duration')),
+                                      DataColumn(label: Text('Quantities')),
+                                      DataColumn(label: Text('Status')),
+                                      DataColumn(label: Text('Actions')),
+                                    ],
                                 rows: adminProvider.trips.map((trip) {
                                   final duration = trip.arrivalTime.difference(trip.departureTime);
                                   final hours = duration.inHours;
@@ -1646,8 +1816,17 @@ class AdminDeparturesPage extends StatelessWidget {
                                         ),
                                       ),
                                     ),
+                                    DataCell(
+                                      IconButton(
+                                        icon: const Icon(Icons.edit, size: 20),
+                                        onPressed: () => _showEditDepartureTimeDialog(context, trip, adminProvider),
+                                        tooltip: 'Edit Times',
+                                      ),
+                                    ),
                                   ]);
                                 }).toList(),
+                              ),
+                                ),
                               ),
                             ),
                           ),
