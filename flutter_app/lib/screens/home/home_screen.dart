@@ -15,6 +15,9 @@ class _HomeScreenState extends State<HomeScreen> {
   int? _selectedOriginId;
   int? _selectedDestinationId;
   DateTime? _selectedDate;
+  String? _selectedClass;
+  double? _maxPrice;
+  TimeOfDay? _selectedDepartureTime;
 
   @override
   void initState() {
@@ -46,6 +49,16 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _selectDepartureTime(BuildContext context) async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+    );
+    if (picked != null && picked != _selectedDepartureTime) {
+      setState(() => _selectedDepartureTime = picked);
+    }
+  }
+
   Future<void> _searchTrips() async {
     final tripProvider = Provider.of<TripProvider>(context, listen: false);
     
@@ -53,6 +66,7 @@ class _HomeScreenState extends State<HomeScreen> {
       originStationId: _selectedOriginId,
       destinationStationId: _selectedDestinationId,
       date: _selectedDate,
+      seatClass: _selectedClass,
     );
     
     if (mounted) {
@@ -190,6 +204,58 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                               ),
                             ),
+                            const SizedBox(height: 16),
+                            DropdownButtonFormField<String>(
+                              value: _selectedClass,
+                              decoration: const InputDecoration(
+                                labelText: 'Seat Class (Optional)',
+                                prefixIcon: Icon(Icons.airline_seat_recline_normal),
+                              ),
+                              items: const [
+                                DropdownMenuItem<String>(
+                                  value: null,
+                                  child: Text('Any class'),
+                                ),
+                                DropdownMenuItem<String>(
+                                  value: 'first',
+                                  child: Text('First Class'),
+                                ),
+                                DropdownMenuItem<String>(
+                                  value: 'second',
+                                  child: Text('Second Class'),
+                                ),
+                              ],
+                              onChanged: (value) => setState(() => _selectedClass = value),
+                            ),
+                            const SizedBox(height: 16),
+                            TextField(
+                              decoration: const InputDecoration(
+                                labelText: 'Max Price (Optional)',
+                                prefixIcon: Icon(Icons.attach_money),
+                                hintText: 'e.g. 100',
+                              ),
+                              keyboardType: TextInputType.number,
+                              onChanged: (value) {
+                                setState(() {
+                                  _maxPrice = double.tryParse(value);
+                                });
+                              },
+                            ),
+                            const SizedBox(height: 16),
+                            InkWell(
+                              onTap: () => _selectDepartureTime(context),
+                              child: InputDecorator(
+                                decoration: const InputDecoration(
+                                  labelText: 'Departure Time (Optional)',
+                                  prefixIcon: Icon(Icons.access_time),
+                                ),
+                                child: Text(
+                                  _selectedDepartureTime == null
+                                      ? 'Any time'
+                                      : _selectedDepartureTime!.format(context),
+                                ),
+                              ),
+                            ),
                             const SizedBox(height: 24),
                             SizedBox(
                               width: double.infinity,
@@ -218,27 +284,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       style: Theme.of(context).textTheme.headlineSmall,
                     ),
                     const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _QuickActionCard(
-                            icon: Icons.confirmation_number_outlined,
-                            title: 'My Bookings',
-                            color: AppTheme.primaryColor,
-                            onTap: () => Navigator.pushNamed(context, '/my-bookings'),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: _QuickActionCard(
-                            icon: Icons.train_outlined,
-                            title: 'All Trips',
-                            color: AppTheme.successColor,
-                            onTap: () => Navigator.pushNamed(context, '/trips'),
-                          ),
-                        ),
-                      ],
+                    _QuickActionCard(
+                      icon: Icons.confirmation_number_outlined,
+                      title: 'My Bookings',
+                      color: AppTheme.primaryColor,
+                      onTap: () => Navigator.pushNamed(context, '/my-bookings'),
                     ),
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),
