@@ -55,7 +55,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        trip.trainName,
+                        trip.trainNumber,
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 28,
@@ -212,7 +212,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                       ),
 
                       // Facilities
-                      if (trip.trainFacilities != null) ...[
+                      if (trip.trainNumber != null) ...[
                         const SizedBox(height: 24),
                         Text(
                           'Facilities',
@@ -222,7 +222,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                         Card(
                           child: Padding(
                             padding: const EdgeInsets.all(16),
-                            child: Text(trip.trainFacilities!),
+                            child: Text(trip.trainNumber!),
                           ),
                         ),
                       ],
@@ -312,3 +312,4 @@ class _JourneyPoint extends StatelessWidget {
     );
   }
 }
+

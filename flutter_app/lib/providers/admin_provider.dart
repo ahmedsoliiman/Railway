@@ -4,9 +4,11 @@ import '../models/train.dart';
 import '../models/trip.dart';
 import '../models/carriage.dart';
 import '../services/admin_service.dart';
+import '../services/trip_departure_service.dart';
 
 class AdminProvider with ChangeNotifier {
   final AdminService _adminService = AdminService();
+  final TripDepartureService _tripDepartureService = TripDepartureService();
 
   // Dashboard stats
   Map<String, dynamic>? _dashboardStats;
@@ -19,6 +21,10 @@ class AdminProvider with ChangeNotifier {
   // Carriages
   List<Carriage> _carriages = [];
   List<Carriage> get carriages => _carriages;
+
+  // Carriage Types
+  List<CarriageType> _carriageTypes = [];
+  List<CarriageType> get carriageTypes => _carriageTypes;
 
   // Trains
   List<Train> _trains = [];
@@ -91,7 +97,6 @@ class AdminProvider with ChangeNotifier {
     String? address,
     double? latitude,
     double? longitude,
-    String? facilities,
   }) async {
     final response = await _adminService.createStation(
       name: name,
@@ -100,7 +105,6 @@ class AdminProvider with ChangeNotifier {
       address: address,
       latitude: latitude,
       longitude: longitude,
-      facilities: facilities,
     );
 
     if (response['success']) {
@@ -118,7 +122,6 @@ class AdminProvider with ChangeNotifier {
     String? address,
     double? latitude,
     double? longitude,
-    String? facilities,
   }) async {
     final response = await _adminService.updateStation(
       id: id,
@@ -128,7 +131,6 @@ class AdminProvider with ChangeNotifier {
       address: address,
       latitude: latitude,
       longitude: longitude,
-      facilities: facilities,
     );
 
     if (response['success']) {
@@ -149,6 +151,19 @@ class AdminProvider with ChangeNotifier {
     return response;
   }
 
+  // ============ CARRIAGE TYPES ============
+
+  Future<void> loadCarriageTypes() async {
+    try {
+      _carriageTypes = await _adminService.getCarriageTypes();
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+    }
+  }
+
+  // ============ CARRIAGES ============
   // ============ CARRIAGES MANAGEMENT ============
 
   Future<void> loadCarriages() async {
@@ -170,18 +185,12 @@ class AdminProvider with ChangeNotifier {
   }
 
   Future<Map<String, dynamic>> createCarriage({
-    required String name,
-    required String classType,
-    required int seatsCount,
-    String? model,
-    String? description,
+    required String carriageNumber,
+    required int carriageTypeId,
   }) async {
     final response = await _adminService.createCarriage(
-      name: name,
-      classType: classType,
-      seatsCount: seatsCount,
-      model: model,
-      description: description,
+      carriageNumber: carriageNumber,
+      carriageTypeId: carriageTypeId,
     );
 
     if (response['success']) {
@@ -193,19 +202,13 @@ class AdminProvider with ChangeNotifier {
 
   Future<Map<String, dynamic>> updateCarriage({
     required int id,
-    String? name,
-    String? classType,
-    int? seatsCount,
-    String? model,
-    String? description,
+    String? carriageNumber,
+    int? carriageTypeId,
   }) async {
     final response = await _adminService.updateCarriage(
       id: id,
-      name: name,
-      classType: classType,
-      seatsCount: seatsCount,
-      model: model,
-      description: description,
+      carriageNumber: carriageNumber,
+      carriageTypeId: carriageTypeId,
     );
 
     if (response['success']) {
@@ -248,18 +251,14 @@ class AdminProvider with ChangeNotifier {
 
   Future<Map<String, dynamic>> createTrain({
     required String trainNumber,
-    required String name,
     required String type,
     required List<Map<String, dynamic>> carriages,
-    String? facilities,
     String? status,
   }) async {
     final response = await _adminService.createTrain(
       trainNumber: trainNumber,
-      name: name,
       type: type,
       carriages: carriages,
-      facilities: facilities,
       status: status,
     );
 
@@ -273,19 +272,15 @@ class AdminProvider with ChangeNotifier {
   Future<Map<String, dynamic>> updateTrain({
     required int id,
     String? trainNumber,
-    String? name,
     String? type,
     List<Map<String, dynamic>>? carriages,
-    String? facilities,
     String? status,
   }) async {
     final response = await _adminService.updateTrain(
       id: id,
       trainNumber: trainNumber,
-      name: name,
       type: type,
       carriages: carriages,
-      facilities: facilities,
       status: status,
     );
 
@@ -421,16 +416,78 @@ class AdminProvider with ChangeNotifier {
     }
   }
 
-  // ============ RESERVATIONS ============
+  // ============ BOOKINGS ============
 
-  Future<List<dynamic>> getAllReservations() async {
-    final response = await _adminService.getAllReservations();
+  Future<List<dynamic>> getAllBookings() async {
+    final response = await _adminService.getAllBookings();
 
     if (response['success']) {
       return response['data'] as List<dynamic>;
     } else {
       throw Exception(response['message']);
     }
+  }
+
+  // ============ TRIP DEPARTURES ============
+
+  Future<List<dynamic>> getTripDepartures(int tripId) async {
+    final response = await _tripDepartureService.getTripDepartures(tripId);
+
+    if (response['success']) {
+      return response['data'] as List<dynamic>;
+    } else {
+      throw Exception(response['message']);
+    }
+  }
+
+  Future<Map<String, dynamic>> createTripDeparture({
+    required int tripId,
+    required DateTime departureTime,
+    required DateTime arrivalTime,
+    required int availableSeats,
+  }) async {
+    final response = await _tripDepartureService.createTripDeparture(
+      tripId: tripId,
+      departureTime: departureTime,
+      arrivalTime: arrivalTime,
+      availableSeats: availableSeats,
+    );
+
+    if (response['success']) {
+      await loadTrips(); // Reload to get updated departures
+    }
+
+    return response;
+  }
+
+  Future<Map<String, dynamic>> updateTripDeparture({
+    required int id,
+    required DateTime departureTime,
+    required DateTime arrivalTime,
+    required int availableSeats,
+  }) async {
+    final response = await _tripDepartureService.updateTripDeparture(
+      id: id,
+      departureTime: departureTime,
+      arrivalTime: arrivalTime,
+      availableSeats: availableSeats,
+    );
+
+    if (response['success']) {
+      await loadTrips(); // Reload to get updated departures
+    }
+
+    return response;
+  }
+
+  Future<Map<String, dynamic>> deleteTripDeparture(int id) async {
+    final response = await _tripDepartureService.deleteTripDeparture(id);
+
+    if (response['success']) {
+      await loadTrips(); // Reload to get updated departures
+    }
+
+    return response;
   }
 
   void clearError() {

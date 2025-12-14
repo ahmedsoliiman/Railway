@@ -47,15 +47,15 @@ class _BookingScreenState extends State<BookingScreen> {
         'totalPrice': totalPrice,
         'trip': {
           'id': trip.id,
-          'trainName': trip.trainName,
+          'trainName': trip.trainNumber,
           'trainNumber': trip.trainNumber,
           'trainType': trip.trainType,
           'origin': trip.originName,
           'destination': trip.destinationName,
           'originCity': trip.originCity,
           'destinationCity': trip.destinationCity,
-          'departureTime': trip.departureTime.toIso8601String(),
-          'arrivalTime': trip.arrivalTime.toIso8601String(),
+          'departureTime': trip.effectiveDepartureTime?.toIso8601String() ?? '',
+          'arrivalTime': trip.effectiveArrivalTime?.toIso8601String() ?? '',
         },
       },
     );
@@ -96,7 +96,7 @@ class _BookingScreenState extends State<BookingScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          trip.trainName,
+                          trip.trainNumber,
                           style: Theme.of(context).textTheme.titleLarge,
                         ),
                         const SizedBox(height: 8),
@@ -243,3 +243,4 @@ class _BookingScreenState extends State<BookingScreen> {
     );
   }
 }
+

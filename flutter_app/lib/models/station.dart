@@ -6,7 +6,6 @@ class Station {
   final String? address;
   final double? latitude;
   final double? longitude;
-  final String? facilities;
 
   Station({
     required this.id,
@@ -16,7 +15,6 @@ class Station {
     this.address,
     this.latitude,
     this.longitude,
-    this.facilities,
   });
 
   factory Station.fromJson(Map<String, dynamic> json) {
@@ -28,7 +26,6 @@ class Station {
       address: json['address'],
       latitude: json['latitude'] != null ? double.tryParse(json['latitude'].toString()) : null,
       longitude: json['longitude'] != null ? double.tryParse(json['longitude'].toString()) : null,
-      facilities: json['facilities'],
     );
   }
 
@@ -41,7 +38,6 @@ class Station {
       'address': address,
       'latitude': latitude,
       'longitude': longitude,
-      'facilities': facilities,
     };
   }
 }

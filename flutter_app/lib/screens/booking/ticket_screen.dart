@@ -29,7 +29,7 @@ class _TicketScreenState extends State<TicketScreen> {
     final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
     final tripProvider = Provider.of<TripProvider>(context, listen: false);
 
-    final response = await tripProvider.createReservation(
+    final response = await tripProvider.createBooking(
       tripId: args['tripId'],
       seatClass: args['seatClass'].toString().toLowerCase(),
       numberOfSeats: args['numberOfSeats'],
@@ -405,3 +405,4 @@ class _TicketRow extends StatelessWidget {
     );
   }
 }
+

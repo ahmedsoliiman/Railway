@@ -92,7 +92,6 @@ class AdminService {
     String? address,
     double? latitude,
     double? longitude,
-    String? facilities,
   }) async {
     try {
       final headers = await _getHeaders();
@@ -106,7 +105,6 @@ class AdminService {
           'address': address,
           'latitude': latitude,
           'longitude': longitude,
-          'facilities': facilities,
         }),
       );
 
@@ -140,7 +138,6 @@ class AdminService {
     String? address,
     double? latitude,
     double? longitude,
-    String? facilities,
   }) async {
     try {
       final headers = await _getHeaders();
@@ -154,7 +151,6 @@ class AdminService {
           if (address != null) 'address': address,
           if (latitude != null) 'latitude': latitude,
           if (longitude != null) 'longitude': longitude,
-          if (facilities != null) 'facilities': facilities,
         }),
       );
 
@@ -211,6 +207,27 @@ class AdminService {
 
   // ============ CARRIAGES MANAGEMENT ============
   
+  Future<List<CarriageType>> getCarriageTypes() async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse('${AppConfig.baseUrl}/admin/carriage-types'),
+        headers: headers,
+      );
+
+      final data = json.decode(response.body);
+      
+      if (response.statusCode == 200 && data['success']) {
+        final List<dynamic> typesJson = data['data'];
+        return typesJson.map((json) => CarriageType.fromJson(json)).toList();
+      } else {
+        return [];
+      }
+    } catch (e) {
+      return [];
+    }
+  }
+
   Future<Map<String, dynamic>> getCarriages() async {
     try {
       final headers = await _getHeaders();
@@ -242,11 +259,8 @@ class AdminService {
   }
 
   Future<Map<String, dynamic>> createCarriage({
-    required String name,
-    required String classType,
-    required int seatsCount,
-    String? model,
-    String? description,
+    required String carriageNumber,
+    required int carriageTypeId,
   }) async {
     try {
       final headers = await _getHeaders();
@@ -254,11 +268,8 @@ class AdminService {
         Uri.parse('${AppConfig.baseUrl}/admin/carriages'),
         headers: headers,
         body: json.encode({
-          'name': name,
-          'class_type': classType,
-          'seats_count': seatsCount,
-          if (model != null) 'model': model,
-          if (description != null) 'description': description,
+          'carriage_number': carriageNumber,
+          'carriage_type_id': carriageTypeId,
         }),
       );
 
@@ -273,11 +284,8 @@ class AdminService {
 
   Future<Map<String, dynamic>> updateCarriage({
     required int id,
-    String? name,
-    String? classType,
-    int? seatsCount,
-    String? model,
-    String? description,
+    String? carriageNumber,
+    int? carriageTypeId,
   }) async {
     try {
       final headers = await _getHeaders();
@@ -285,11 +293,8 @@ class AdminService {
         Uri.parse('${AppConfig.baseUrl}/admin/carriages/$id'),
         headers: headers,
         body: json.encode({
-          if (name != null) 'name': name,
-          if (classType != null) 'class_type': classType,
-          if (seatsCount != null) 'seats_count': seatsCount,
-          if (model != null) 'model': model,
-          if (description != null) 'description': description,
+          if (carriageNumber != null) 'carriage_number': carriageNumber,
+          if (carriageTypeId != null) 'carriage_type_id': carriageTypeId,
         }),
       );
 
@@ -357,10 +362,8 @@ class AdminService {
 
   Future<Map<String, dynamic>> createTrain({
     required String trainNumber,
-    required String name,
     required String type,
     required List<Map<String, dynamic>> carriages,
-    String? facilities,
     String? status,
   }) async {
     try {
@@ -369,11 +372,9 @@ class AdminService {
         Uri.parse('${AppConfig.baseUrl}/admin/trains'),
         headers: headers,
         body: json.encode({
-          'trainNumber': trainNumber,
-          'name': name,
+          'train_number': trainNumber,
           'type': type,
           'carriages': carriages,
-          'facilities': facilities,
           'status': status ?? 'active',
         }),
       );
@@ -403,10 +404,8 @@ class AdminService {
   Future<Map<String, dynamic>> updateTrain({
     required int id,
     String? trainNumber,
-    String? name,
     String? type,
     List<Map<String, dynamic>>? carriages,
-    String? facilities,
     String? status,
   }) async {
     try {
@@ -415,11 +414,9 @@ class AdminService {
         Uri.parse('${AppConfig.baseUrl}/admin/trains/$id'),
         headers: headers,
         body: json.encode({
-          if (trainNumber != null) 'trainNumber': trainNumber,
-          if (name != null) 'name': name,
+          if (trainNumber != null) 'train_number': trainNumber,
           if (type != null) 'type': type,
           if (carriages != null) 'carriages': carriages,
-          if (facilities != null) 'facilities': facilities,
           if (status != null) 'status': status,
         }),
       );
@@ -721,9 +718,9 @@ class AdminService {
     }
   }
 
-  // ============ RESERVATIONS ============
+  // ============ BOOKINGS ============
   
-  Future<Map<String, dynamic>> getAllReservations() async {
+  Future<Map<String, dynamic>> getAllBookings() async {
     try {
       final headers = await _getHeaders();
       final response = await http.get(
@@ -741,7 +738,7 @@ class AdminService {
       } else {
         return {
           'success': false,
-          'message': data['message'] ?? 'Failed to fetch reservations',
+          'message': data['message'] ?? 'Failed to fetch bookings',
         };
       }
     } catch (e) {

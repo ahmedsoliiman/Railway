@@ -1,4 +1,4 @@
-class Reservation {
+class Booking {
   final int id;
   final int userId;
   final int tripId;
@@ -11,7 +11,6 @@ class Reservation {
   final DateTime createdAt;
   
   // Trip details
-  final String? trainName;
   final String? trainNumber;
   final String? originName;
   final String? originCity;
@@ -21,7 +20,7 @@ class Reservation {
   final DateTime? arrivalTime;
   final String? tripStatus;
 
-  Reservation({
+  Booking({
     required this.id,
     required this.userId,
     required this.tripId,
@@ -32,7 +31,6 @@ class Reservation {
     required this.bookingReference,
     required this.status,
     required this.createdAt,
-    this.trainName,
     this.trainNumber,
     this.originName,
     this.originCity,
@@ -43,8 +41,8 @@ class Reservation {
     this.tripStatus,
   });
 
-  factory Reservation.fromJson(Map<String, dynamic> json) {
-    return Reservation(
+  factory Booking.fromJson(Map<String, dynamic> json) {
+    return Booking(
       id: json['id'],
       userId: json['user_id'],
       tripId: json['trip_id'],
@@ -55,7 +53,6 @@ class Reservation {
       bookingReference: json['booking_reference'],
       status: json['status'],
       createdAt: DateTime.parse(json['created_at']),
-      trainName: json['train_name'],
       trainNumber: json['train_number'],
       originName: json['origin_name'],
       originCity: json['origin_city'],
@@ -90,7 +87,6 @@ class Reservation {
       'booking_reference': bookingReference,
       'status': status,
       'created_at': createdAt.toIso8601String(),
-      'train_name': trainName,
       'train_number': trainNumber,
       'origin_name': originName,
       'origin_city': originCity,

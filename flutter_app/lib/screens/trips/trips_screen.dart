@@ -231,7 +231,7 @@ class _TripsScreenState extends State<TripsScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      trip.trainName,
+                                      trip.trainNumber,
                                       style: Theme.of(context).textTheme.titleLarge,
                                     ),
                                     Row(
@@ -283,7 +283,7 @@ class _TripsScreenState extends State<TripsScreen> {
                                       style: Theme.of(context).textTheme.titleMedium,
                                     ),
                                     Text(
-                                      DateFormat('HH:mm').format(trip.departureTime),
+                                      trip.effectiveDepartureTime != null ? DateFormat('HH:mm').format(trip.effectiveDepartureTime!) : 'N/A',
                                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                                         color: AppTheme.primaryColor,
                                         fontWeight: FontWeight.bold,
@@ -303,7 +303,7 @@ class _TripsScreenState extends State<TripsScreen> {
                                       textAlign: TextAlign.end,
                                     ),
                                     Text(
-                                      DateFormat('HH:mm').format(trip.arrivalTime),
+                                      trip.effectiveArrivalTime != null ? DateFormat('HH:mm').format(trip.effectiveArrivalTime!) : 'N/A',
                                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                                         color: AppTheme.primaryColor,
                                         fontWeight: FontWeight.bold,
@@ -363,3 +363,4 @@ class _TripsScreenState extends State<TripsScreen> {
     );
   }
 }
+

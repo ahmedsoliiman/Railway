@@ -4,7 +4,7 @@ import '../config/app_config.dart';
 import '../models/user.dart';
 import '../models/trip.dart';
 import '../models/station.dart';
-import '../models/reservation.dart';
+import '../models/booking.dart';
 import 'storage_service.dart';
 
 class ApiService {
@@ -243,8 +243,8 @@ class ApiService {
     }
   }
 
-  // Reservations APIs
-  Future<Map<String, dynamic>> createReservation({
+  // Bookings APIs
+  Future<Map<String, dynamic>> createBooking({
     required int tripId,
     required String seatClass,
     required int numberOfSeats,
@@ -267,7 +267,7 @@ class ApiService {
     }
   }
 
-  Future<List<Reservation>> getMyReservations() async {
+  Future<List<Booking>> getMyBookings() async {
     try {
       final headers = await _getHeaders();
       final response = await http.get(
@@ -277,40 +277,40 @@ class ApiService {
 
       final data = jsonDecode(response.body);
       if (data['success'] && data['data'] != null) {
-        final List reservationsJson = data['data'];
-        return reservationsJson.map((json) => Reservation.fromJson(json)).toList();
+        final List bookingsJson = data['data'];
+        return bookingsJson.map((json) => Booking.fromJson(json)).toList();
       }
       return [];
     } catch (e) {
-      print('Get reservations error: $e');
+      print('Get bookings error: $e');
       return [];
     }
   }
 
-  Future<Reservation?> getReservationDetails(int reservationId) async {
+  Future<Booking?> getBookingDetails(int bookingId) async {
     try {
       final headers = await _getHeaders();
       final response = await http.get(
-        Uri.parse('${AppConfig.baseUrl}${AppConfig.reservationsEndpoint}/$reservationId'),
+        Uri.parse('${AppConfig.baseUrl}${AppConfig.reservationsEndpoint}/$bookingId'),
         headers: headers,
       );
 
       final data = jsonDecode(response.body);
       if (data['success'] && data['data'] != null) {
-        return Reservation.fromJson(data['data']);
+        return Booking.fromJson(data['data']);
       }
       return null;
     } catch (e) {
-      print('Get reservation details error: $e');
+      print('Get booking details error: $e');
       return null;
     }
   }
 
-  Future<Map<String, dynamic>> cancelReservation(int reservationId) async {
+  Future<Map<String, dynamic>> cancelBooking(int bookingId) async {
     try {
       final headers = await _getHeaders();
       final response = await http.delete(
-        Uri.parse('${AppConfig.baseUrl}${AppConfig.reservationsEndpoint}/$reservationId'),
+        Uri.parse('${AppConfig.baseUrl}${AppConfig.reservationsEndpoint}/$bookingId'),
         headers: headers,
       );
 

@@ -231,7 +231,7 @@ class _TripsScreenState extends State<TripsScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      trip.trainName,
+                                      trip.trainNumber,
                                       style: Theme.of(context).textTheme.titleLarge,
                                     ),
                                     Row(
@@ -363,3 +363,4 @@ class _TripsScreenState extends State<TripsScreen> {
     );
   }
 }
+

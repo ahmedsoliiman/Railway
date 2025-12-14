@@ -23,7 +23,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> with SingleTickerPr
 
   Future<void> _loadBookings() async {
     final tripProvider = Provider.of<TripProvider>(context, listen: false);
-    await tripProvider.loadReservations();
+    await tripProvider.loadBookings();
   }
 
   Future<void> _cancelBooking(int reservationId) async {
@@ -49,7 +49,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> with SingleTickerPr
     if (confirmed != true) return;
 
     final tripProvider = Provider.of<TripProvider>(context, listen: false);
-    final response = await tripProvider.cancelReservation(reservationId);
+    final response = await tripProvider.cancelBooking(reservationId);
 
     if (!mounted) return;
 
@@ -89,8 +89,8 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> with SingleTickerPr
           return TabBarView(
             controller: _tabController,
             children: [
-              _buildBookingsList(tripProvider.upcomingReservations, true),
-              _buildBookingsList(tripProvider.pastReservations, false),
+              _buildBookingsList(tripProvider.upcomingBookings, true),
+              _buildBookingsList(tripProvider.pastBookings, false),
             ],
           );
         },
@@ -140,7 +140,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> with SingleTickerPr
                   ),
                   const Divider(height: 16),
                   Text(
-                    reservation.trainName ?? 'Unknown Train',
+                    reservation.trainNumber ?? 'Unknown Train',
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const SizedBox(height: 8),
@@ -242,3 +242,4 @@ class _StatusBadge extends StatelessWidget {
     );
   }
 }
+

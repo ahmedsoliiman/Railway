@@ -3,12 +3,7 @@ import 'carriage.dart';
 class Train {
   final int id;
   final String trainNumber;
-  final String name;
-  final String type; // Express, Premium, Standard
-  final int totalSeats;
-  final int firstClassSeats;
-  final int secondClassSeats;
-  final String? facilities;
+  final String type; // Express, ordinary, VIP, tahya masr, sleeper
   final String status; // active, maintenance, retired
   final List<TrainCarriage>? carriages;
   final DateTime? createdAt;
@@ -17,12 +12,7 @@ class Train {
   Train({
     required this.id,
     required this.trainNumber,
-    required this.name,
     required this.type,
-    required this.totalSeats,
-    required this.firstClassSeats,
-    required this.secondClassSeats,
-    this.facilities,
     required this.status,
     this.carriages,
     this.createdAt,
@@ -40,12 +30,7 @@ class Train {
     return Train(
       id: json['id'] ?? 0,
       trainNumber: json['trainNumber'] ?? json['train_number'] ?? '',
-      name: json['name'] ?? '',
-      type: json['type'] ?? 'Standard',
-      totalSeats: json['totalSeats'] ?? json['total_seats'] ?? 0,
-      firstClassSeats: json['firstClassSeats'] ?? json['first_class_seats'] ?? 0,
-      secondClassSeats: json['secondClassSeats'] ?? json['second_class_seats'] ?? 0,
-      facilities: json['facilities'],
+      type: json['type'] ?? 'ordinary',
       status: json['status'] ?? 'active',
       carriages: carriages,
       createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : 
@@ -59,21 +44,11 @@ class Train {
     return {
       'id': id,
       'train_number': trainNumber,
-      'name': name,
       'type': type,
-      'total_seats': totalSeats,
-      'first_class_seats': firstClassSeats,
-      'second_class_seats': secondClassSeats,
-      'facilities': facilities,
       'status': status,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };
-  }
-
-  List<String> get facilitiesList {
-    if (facilities == null || facilities!.isEmpty) return [];
-    return facilities!.split(',').map((f) => f.trim()).toList();
   }
 
   String get statusDisplay {
@@ -93,10 +68,14 @@ class Train {
     switch (type.toLowerCase()) {
       case 'express':
         return 'Express';
-      case 'premium':
-        return 'Premium';
-      case 'standard':
-        return 'Standard';
+      case 'ordinary':
+        return 'Ordinary';
+      case 'vip':
+        return 'VIP';
+      case 'tahya masr':
+        return 'Tahya Masr';
+      case 'sleeper':
+        return 'Sleeper';
       default:
         return type;
     }

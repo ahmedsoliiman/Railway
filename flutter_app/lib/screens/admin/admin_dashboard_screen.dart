@@ -307,7 +307,6 @@ class AdminStationsPage extends StatelessWidget {
     final codeController = TextEditingController(text: station?.code);
     final cityController = TextEditingController(text: station?.city);
     final addressController = TextEditingController(text: station?.address);
-    final facilitiesController = TextEditingController(text: station?.facilities);
     final formKey = GlobalKey<FormState>();
 
     showDialog(
@@ -352,15 +351,6 @@ class AdminStationsPage extends StatelessWidget {
                 icon: Icons.place,
                 maxLines: 2,
               ),
-              const SizedBox(height: 16),
-              EnhancedTextField(
-                controller: facilitiesController,
-                label: 'Facilities',
-                hint: 'WiFi, Waiting Room, Parking, Restaurant',
-                icon: Icons.local_convenience_store,
-                maxLines: 2,
-                helperText: 'Separate multiple facilities with commas',
-              ),
             ],
           ),
         ),
@@ -385,7 +375,6 @@ class AdminStationsPage extends StatelessWidget {
                       code: codeController.text,
                       city: cityController.text,
                       address: addressController.text.isEmpty ? null : addressController.text,
-                      facilities: facilitiesController.text.isEmpty ? null : facilitiesController.text,
                     )
                   : await adminProvider.updateStation(
                       id: station.id,
@@ -393,7 +382,6 @@ class AdminStationsPage extends StatelessWidget {
                       code: codeController.text,
                       city: cityController.text,
                       address: addressController.text.isEmpty ? null : addressController.text,
-                      facilities: facilitiesController.text.isEmpty ? null : facilitiesController.text,
                     );
 
               if (context.mounted) {
@@ -466,16 +454,14 @@ class AdminStationsPage extends StatelessWidget {
                           columns: const [
                             DataColumn(label: Text('Name')),
                             DataColumn(label: Text('City')),
-                            DataColumn(label: Text('Address')),
-                            DataColumn(label: Text('Facilities')),
+                            DataColumn(label: Text('Code')),
                             DataColumn(label: Text('Actions')),
                           ],
                           rows: adminProvider.stations.map((station) {
                             return DataRow(cells: [
                               DataCell(Text(station.name)),
                               DataCell(Text(station.city)),
-                              DataCell(Text(station.address ?? 'N/A')),
-                              DataCell(Text(station.facilities ?? 'N/A')),
+                              DataCell(Text(station.code)),
                               DataCell(Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -537,13 +523,16 @@ class AdminStationsPage extends StatelessWidget {
 class AdminCarriagesPage extends StatelessWidget {
   const AdminCarriagesPage({super.key});
 
-  void _showCarriageDialog(BuildContext context, {Carriage? carriage}) {
-    final nameController = TextEditingController(text: carriage?.name);
-    final seatsCountController = TextEditingController(text: carriage?.seatsCount.toString());
-    final modelController = TextEditingController(text: carriage?.model);
-    final descriptionController = TextEditingController(text: carriage?.description);
+  void _showCarriageDialog(BuildContext context, {Carriage? carriage}) async {
+    final adminProvider = Provider.of<AdminProvider>(context, listen: false);
     
-    String selectedClassType = carriage?.classType ?? 'first';
+    // Load carriage types if not already loaded
+    if (adminProvider.carriageTypes.isEmpty) {
+      await adminProvider.loadCarriageTypes();
+    }
+    
+    final carriageNumberController = TextEditingController(text: carriage?.carriageNumber);
+    int? selectedCarriageTypeId = carriage?.carriageTypeId ?? (adminProvider.carriageTypes.isNotEmpty ? adminProvider.carriageTypes.first.id : null);
 
     showDialog(
       context: context,
@@ -559,59 +548,31 @@ class AdminCarriagesPage extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   TextField(
-                    controller: nameController,
+                    controller: carriageNumberController,
                     decoration: const InputDecoration(
-                      labelText: 'Carriage Name *',
+                      labelText: 'Carriage Number *',
                       border: OutlineInputBorder(),
-                      hintText: 'e.g., First Class A1',
+                      hintText: 'e.g., A1, B2, C3',
                     ),
                   ),
                   const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    initialValue: selectedClassType,
+                  DropdownButtonFormField<int>(
+                    value: selectedCarriageTypeId,
                     decoration: const InputDecoration(
-                      labelText: 'Class Type *',
+                      labelText: 'Carriage Type *',
                       border: OutlineInputBorder(),
                     ),
-                    items: const [
-                      DropdownMenuItem(value: 'first', child: Text('First Class')),
-                      DropdownMenuItem(value: 'second', child: Text('Second Class')),
-                      DropdownMenuItem(value: 'economic', child: Text('Economic Class')),
-                    ],
+                    items: adminProvider.carriageTypes.map((type) {
+                      return DropdownMenuItem<int>(
+                        value: type.id,
+                        child: Text('${type.typeDisplay} (${type.capacity} seats - EGP ${type.price})'),
+                      );
+                    }).toList(),
                     onChanged: (value) {
                       setState(() {
-                        selectedClassType = value!;
+                        selectedCarriageTypeId = value;
                       });
                     },
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: seatsCountController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Number of Seats *',
-                      border: OutlineInputBorder(),
-                      hintText: 'e.g., 40',
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: modelController,
-                    decoration: const InputDecoration(
-                      labelText: 'Model',
-                      border: OutlineInputBorder(),
-                      hintText: 'e.g., Modern Luxury',
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: descriptionController,
-                    maxLines: 3,
-                    decoration: const InputDecoration(
-                      labelText: 'Description',
-                      border: OutlineInputBorder(),
-                      hintText: 'Optional description...',
-                    ),
                   ),
                 ],
               ),
@@ -624,29 +585,22 @@ class AdminCarriagesPage extends StatelessWidget {
             ),
             ElevatedButton(
               onPressed: () async {
-                if (nameController.text.isEmpty || seatsCountController.text.isEmpty) {
+                if (carriageNumberController.text.isEmpty || selectedCarriageTypeId == null) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Please fill all required fields')),
                   );
                   return;
                 }
 
-                final adminProvider = Provider.of<AdminProvider>(context, listen: false);
                 final result = carriage == null
                     ? await adminProvider.createCarriage(
-                        name: nameController.text,
-                        classType: selectedClassType,
-                        seatsCount: int.parse(seatsCountController.text),
-                        model: modelController.text.isEmpty ? null : modelController.text,
-                        description: descriptionController.text.isEmpty ? null : descriptionController.text,
+                        carriageNumber: carriageNumberController.text,
+                        carriageTypeId: selectedCarriageTypeId!,
                       )
                     : await adminProvider.updateCarriage(
                         id: carriage.id,
-                        name: nameController.text,
-                        classType: selectedClassType,
-                        seatsCount: int.parse(seatsCountController.text),
-                        model: modelController.text.isEmpty ? null : modelController.text,
-                        description: descriptionController.text.isEmpty ? null : descriptionController.text,
+                        carriageNumber: carriageNumberController.text,
+                        carriageTypeId: selectedCarriageTypeId!,
                       );
 
                 if (context.mounted) {
@@ -737,23 +691,26 @@ class AdminCarriagesPage extends StatelessWidget {
                           headingRowColor: WidgetStateProperty.all(Colors.grey[100]),
                           columns: const [
                             DataColumn(label: Text('ID', style: TextStyle(fontWeight: FontWeight.bold))),
-                            DataColumn(label: Text('Name', style: TextStyle(fontWeight: FontWeight.bold))),
-                            DataColumn(label: Text('Class Type', style: TextStyle(fontWeight: FontWeight.bold))),
-                            DataColumn(label: Text('Seats', style: TextStyle(fontWeight: FontWeight.bold))),
-                        DataColumn(label: Text('Model', style: TextStyle(fontWeight: FontWeight.bold))),
-                        DataColumn(label: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold))),
+                            DataColumn(label: Text('Carriage Number', style: TextStyle(fontWeight: FontWeight.bold))),
+                            DataColumn(label: Text('Type', style: TextStyle(fontWeight: FontWeight.bold))),
+                            DataColumn(label: Text('Capacity', style: TextStyle(fontWeight: FontWeight.bold))),
+                            DataColumn(label: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold))),
                       ],
                       rows: adminProvider.carriages.map((carriage) {
+                        final classType = carriage.carriageType?.type.toLowerCase() ?? 'third class';
                         Color classColor;
-                        switch (carriage.classType) {
-                          case 'first':
+                        switch (classType) {
+                          case 'first class':
                             classColor = Colors.purple;
                             break;
-                          case 'second':
+                          case 'second class':
                             classColor = Colors.blue;
                             break;
-                          case 'economic':
+                          case 'third class':
                             classColor = Colors.green;
+                            break;
+                          case 'sleeper':
+                            classColor = Colors.orange;
                             break;
                           default:
                             classColor = Colors.grey;
@@ -761,7 +718,7 @@ class AdminCarriagesPage extends StatelessWidget {
 
                         return DataRow(cells: [
                           DataCell(Text(carriage.id.toString())),
-                          DataCell(Text(carriage.name)),
+                          DataCell(Text(carriage.carriageNumber)),
                           DataCell(
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -771,13 +728,12 @@ class AdminCarriagesPage extends StatelessWidget {
                                 border: Border.all(color: classColor),
                               ),
                               child: Text(
-                                carriage.classTypeDisplay,
+                                carriage.carriageType?.typeDisplay ?? 'Unknown',
                                 style: TextStyle(color: classColor, fontWeight: FontWeight.bold),
                               ),
                             ),
                           ),
-                          DataCell(Text(carriage.seatsCount.toString())),
-                          DataCell(Text(carriage.model ?? '-')),
+                          DataCell(Text((carriage.carriageType?.capacity ?? 0).toString())),
                           DataCell(
                             Row(
                               mainAxisSize: MainAxisSize.min,
@@ -850,8 +806,6 @@ class AdminTrainsPage extends StatelessWidget {
 
   void _showTrainDialog(BuildContext context, {Train? train}) {
     final trainNumberController = TextEditingController(text: train?.trainNumber);
-    final nameController = TextEditingController(text: train?.name);
-    final facilitiesController = TextEditingController(text: train?.facilities);
     String selectedType = train?.type ?? 'express';
     String selectedStatus = train?.status ?? 'active';
     final formKey = GlobalKey<FormState>();
@@ -872,7 +826,7 @@ class AdminTrainsPage extends StatelessWidget {
       int total = 0;
       for (var entry in selectedCarriages.entries) {
         final carriage = adminProvider.carriages.firstWhere((c) => c.id == entry.key);
-        total += carriage.seatsCount * entry.value;
+        total += (carriage.carriageType?.capacity ?? 0) * entry.value;
       }
       return total;
     }
@@ -898,14 +852,6 @@ class AdminTrainsPage extends StatelessWidget {
                   hint: 'e.g., TR-001',
                   icon: Icons.confirmation_number,
                   validator: (v) => v?.isEmpty ?? true ? 'Train number is required' : null,
-                ),
-                const SizedBox(height: 16),
-                EnhancedTextField(
-                  controller: nameController,
-                  label: 'Train Name *',
-                  hint: 'e.g., Express Eagle',
-                  icon: Icons.train,
-                  validator: (v) => v?.isEmpty ?? true ? 'Train name is required' : null,
                 ),
                 const SizedBox(height: 16),
                 EnhancedDropdown<String>(
@@ -1008,7 +954,7 @@ class AdminTrainsPage extends StatelessWidget {
                                   .where((c) => !selectedCarriages.containsKey(c.id))
                                   .map((c) => DropdownMenuItem(
                                         value: c.id,
-                                        child: Text('${c.name} (${c.classTypeDisplay}, ${c.seatsCount} seats)'),
+                                        child: Text('${c.carriageNumber} (${c.carriageType?.typeDisplay ?? 'Unknown'}, ${c.carriageType?.capacity ?? 0} seats)'),
                                       ))
                             ],
                             onChanged: (carriageId) {
@@ -1029,15 +975,6 @@ class AdminTrainsPage extends StatelessWidget {
                       ],
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                EnhancedTextField(
-                  controller: facilitiesController,
-                  label: 'Facilities',
-                  hint: 'AC, WiFi, Food Service, Entertainment',
-                  icon: Icons.stars,
-                  maxLines: 2,
-                  helperText: 'Comma-separated list of onboard amenities',
                 ),
                 const SizedBox(height: 16),
                 EnhancedDropdown<String>(
@@ -1085,19 +1022,15 @@ class AdminTrainsPage extends StatelessWidget {
                 final response = train == null
                     ? await adminProvider.createTrain(
                         trainNumber: trainNumberController.text,
-                        name: nameController.text,
                         type: selectedType,
                         carriages: carriages,
-                        facilities: facilitiesController.text.isEmpty ? null : facilitiesController.text,
                         status: selectedStatus,
                       )
                     : await adminProvider.updateTrain(
                         id: train.id,
                         trainNumber: trainNumberController.text,
-                        name: nameController.text,
                         type: selectedType,
                         carriages: carriages,
-                        facilities: facilitiesController.text.isEmpty ? null : facilitiesController.text,
                         status: selectedStatus,
                       );
 
@@ -1171,22 +1104,14 @@ class AdminTrainsPage extends StatelessWidget {
                         child: DataTable(
                           columns: const [
                             DataColumn(label: Text('Number')),
-                            DataColumn(label: Text('Name')),
                             DataColumn(label: Text('Type')),
-                            DataColumn(label: Text('Total Seats')),
-                        DataColumn(label: Text('First Class')),
-                        DataColumn(label: Text('Second Class')),
-                        DataColumn(label: Text('Status')),
+                            DataColumn(label: Text('Status')),
                         DataColumn(label: Text('Actions')),
                       ],
                       rows: adminProvider.trains.map((train) {
                         return DataRow(cells: [
                           DataCell(Text(train.trainNumber)),
-                          DataCell(Text(train.name)),
                           DataCell(Text(train.type)),
-                          DataCell(Text('${train.totalSeats}')),
-                          DataCell(Text('${train.firstClassSeats}')),
-                          DataCell(Text('${train.secondClassSeats}')),
                           DataCell(Text(train.status.toUpperCase())),
                           DataCell(Row(
                             mainAxisSize: MainAxisSize.min,
@@ -1202,7 +1127,7 @@ class AdminTrainsPage extends StatelessWidget {
                                     context: context,
                                     builder: (context) => AlertDialog(
                                       title: const Text('Delete Train'),
-                                      content: Text('Delete ${train.name}?'),
+                                      content: Text('Delete ${train.trainNumber}?'),
                                       actions: [
                                         TextButton(
                                           onPressed: () => Navigator.pop(context, false),
@@ -1258,8 +1183,8 @@ class AdminTripsPage extends StatelessWidget {
     int? selectedOriginId = trip?.originStationId;
     int? selectedDestinationId = trip?.destinationStationId;
     DateTime departure = trip?.departure ?? DateTime.now().add(const Duration(days: 1));
-    DateTime departureTime = trip?.departureTime ?? DateTime.now().add(const Duration(days: 1));
-    DateTime arrivalTime = trip?.arrivalTime ?? DateTime.now().add(const Duration(days: 1, hours: 4));
+    DateTime departureTime = trip?.departureTime ?? trip?.departure ?? DateTime.now().add(const Duration(days: 1));
+    DateTime arrivalTime = trip?.arrivalTime ?? trip?.departure?.add(const Duration(hours: 4)) ?? DateTime.now().add(const Duration(days: 1, hours: 4));
     final formKey = GlobalKey<FormState>();
 
     showDialog(
@@ -1279,7 +1204,7 @@ class AdminTripsPage extends StatelessWidget {
                     items: adminProvider.trains.map((train) {
                       return DropdownMenuItem(
                         value: train.id,
-                        child: Text('${train.trainNumber} - ${train.name}'),
+                        child: Text('${train.trainNumber} - ${train.trainNumber}'),
                       );
                     }).toList(),
                     onChanged: (value) => setState(() => selectedTrainId = value),
@@ -1498,25 +1423,31 @@ class AdminTripsPage extends StatelessWidget {
                                     columns: const [
                                       DataColumn(label: Text('Train')),
                                       DataColumn(label: Text('Route')),
-                                      DataColumn(label: Text('Departure Date')),
-                                      DataColumn(label: Text('Departure Time')),
-                                      DataColumn(label: Text('1st Class')),
-                                  DataColumn(label: Text('2nd Class')),
-                                  DataColumn(label: Text('Quantities')),
-                                  DataColumn(label: Text('Actions')),
+                                      DataColumn(label: Text('First Departure Date')),
+                                      DataColumn(label: Text('First Departure Time')),
+                                      DataColumn(label: Text('Prices (1st/2nd/Econ)')),
+                                      DataColumn(label: Text('Departures')),
+                                      DataColumn(label: Text('Capacity')),
+                                      DataColumn(label: Text('Actions')),
                                 ],
                                 rows: adminProvider.trips.map((trip) {
+                                  final firstDeparture = trip.effectiveDepartureTime;
                                   return DataRow(cells: [
-                                    DataCell(Text(trip.trainName)),
+                                    DataCell(Text(trip.trainNumber)),
                                     DataCell(Text('${trip.originCity} → ${trip.destinationCity}')),
-                                    DataCell(Text(DateFormat('MMM dd, yyyy').format(trip.departure))),
-                                    DataCell(Text(DateFormat('HH:mm').format(trip.departureTime))),
-                                    DataCell(Text('\$${trip.firstClassPrice?.toStringAsFixed(2)}')),
-                                    DataCell(Text('\$${trip.secondClassPrice?.toStringAsFixed(2)}')),
-                                    DataCell(Text('${trip.quantities}')),
+                                    DataCell(Text(firstDeparture != null ? DateFormat('MMM dd, yyyy').format(firstDeparture) : 'N/A')),
+                                    DataCell(Text(firstDeparture != null ? DateFormat('HH:mm').format(firstDeparture) : 'N/A')),
+                                    DataCell(Text('${trip.firstClassPrice?.toStringAsFixed(0) ?? '0'} / ${trip.secondClassPrice?.toStringAsFixed(0) ?? '0'} / ${trip.economicPrice?.toStringAsFixed(0) ?? '0'} EGP')),
+                                    DataCell(Text('${trip.departuresCount} departures')),
+                                    DataCell(Text('${trip.quantities} seats')),
                                     DataCell(Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
+                                        IconButton(
+                                          icon: const Icon(Icons.schedule, size: 20, color: Colors.blue),
+                                          tooltip: 'Manage Departures',
+                                          onPressed: () => _showDeparturesDialog(context, adminProvider, trip),
+                                        ),
                                         IconButton(
                                           icon: const Icon(Icons.edit, size: 20),
                                           onPressed: () => _showTripDialog(context, adminProvider, trip: trip),
@@ -1573,15 +1504,22 @@ class AdminTripsPage extends StatelessWidget {
 
 // Edit Departure Time Dialog
 void _showEditDepartureTimeDialog(BuildContext context, Trip trip, AdminProvider adminProvider) {
-  TimeOfDay departureTime = TimeOfDay.fromDateTime(trip.departureTime);
-  TimeOfDay arrivalTime = TimeOfDay.fromDateTime(trip.arrivalTime);
+  if (trip.departureTime == null || trip.arrivalTime == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('This trip does not have departure/arrival times set')),
+    );
+    return;
+  }
+  
+  TimeOfDay departureTime = TimeOfDay.fromDateTime(trip.departureTime!);
+  TimeOfDay arrivalTime = TimeOfDay.fromDateTime(trip.arrivalTime!);
 
   showDialog(
     context: context,
     builder: (context) => StatefulBuilder(
       builder: (context, setState) => EnhancedDialog(
         title: 'Edit Departure Times',
-        subtitle: '${trip.trainName} - ${trip.originCity} → ${trip.destinationCity}',
+        subtitle: '${trip.trainNumber} - ${trip.originCity} → ${trip.destinationCity}',
         icon: Icons.access_time,
         headerGradient: LinearGradient(
           colors: [Colors.blue.shade600, Colors.blue.shade800],
@@ -1643,17 +1581,17 @@ void _showEditDepartureTimeDialog(BuildContext context, Trip trip, AdminProvider
             onPressed: () async {
               // Create new DateTime objects with updated times
               final newDepartureTime = DateTime(
-                trip.departureTime.year,
-                trip.departureTime.month,
-                trip.departureTime.day,
+                trip.departureTime!.year,
+                trip.departureTime!.month,
+                trip.departureTime!.day,
                 departureTime.hour,
                 departureTime.minute,
               );
 
               final newArrivalTime = DateTime(
-                trip.arrivalTime.year,
-                trip.arrivalTime.month,
-                trip.arrivalTime.day,
+                trip.arrivalTime!.year,
+                trip.arrivalTime!.month,
+                trip.arrivalTime!.day,
                 arrivalTime.hour,
                 arrivalTime.minute,
               );
@@ -1718,10 +1656,20 @@ class AdminDeparturesPage extends StatelessWidget {
                           fontWeight: FontWeight.bold,
                         ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.refresh),
-                    onPressed: () => adminProvider.loadTrips(),
-                    tooltip: 'Refresh',
+                  Row(
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: () => _showSelectTripForDepartureDialog(context, adminProvider),
+                        icon: const Icon(Icons.add),
+                        label: const Text('Add Departure'),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.refresh),
+                        onPressed: () => adminProvider.loadTrips(),
+                        tooltip: 'Refresh',
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -1752,12 +1700,14 @@ class AdminDeparturesPage extends StatelessWidget {
                                       DataColumn(label: Text('Actions')),
                                     ],
                                 rows: adminProvider.trips.map((trip) {
-                                  final duration = trip.arrivalTime.difference(trip.departureTime);
-                                  final hours = duration.inHours;
-                                  final minutes = duration.inMinutes.remainder(60);
+                                  final duration = trip.duration;
+                                  final hours = duration?.inHours ?? 0;
+                                  final minutes = duration?.inMinutes.remainder(60) ?? 0;
+                                  final depTime = trip.effectiveDepartureTime;
+                                  final arrTime = trip.effectiveArrivalTime;
                                   
                                   return DataRow(cells: [
-                                    DataCell(Text(DateFormat('MMM dd, yyyy').format(trip.departure))),
+                                    DataCell(Text(depTime != null ? DateFormat('MMM dd, yyyy').format(depTime) : 'N/A')),
                                     DataCell(
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -1766,7 +1716,7 @@ class AdminDeparturesPage extends StatelessWidget {
                                           borderRadius: BorderRadius.circular(8),
                                         ),
                                         child: Text(
-                                          DateFormat('HH:mm').format(trip.departureTime),
+                                          depTime != null ? DateFormat('HH:mm').format(depTime) : 'N/A',
                                           style: const TextStyle(
                                             fontWeight: FontWeight.bold,
                                             color: AppTheme.primaryColor,
@@ -1774,9 +1724,9 @@ class AdminDeparturesPage extends StatelessWidget {
                                         ),
                                       ),
                                     ),
-                                    DataCell(Text('${trip.trainName} (${trip.trainNumber})')),
+                                    DataCell(Text('${trip.trainNumber} (${trip.trainNumber})')),
                                     DataCell(Text('${trip.originCity} → ${trip.destinationCity}')),
-                                    DataCell(Text(DateFormat('HH:mm').format(trip.arrivalTime))),
+                                    DataCell(Text(arrTime != null ? DateFormat('HH:mm').format(arrTime) : 'N/A')),
                                     DataCell(Text('${hours}h ${minutes}m')),
                                     DataCell(
                                       Container(
@@ -1799,17 +1749,17 @@ class AdminDeparturesPage extends StatelessWidget {
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                         decoration: BoxDecoration(
-                                          color: trip.departure.isAfter(DateTime.now()) 
+                                          color: (trip.departure?.isAfter(DateTime.now()) ?? false)
                                               ? Colors.green.shade100 
                                               : Colors.orange.shade100,
                                           borderRadius: BorderRadius.circular(12),
                                         ),
                                         child: Text(
-                                          trip.departure.isAfter(DateTime.now()) ? 'SCHEDULED' : 'DEPARTED',
+                                          (trip.departure?.isAfter(DateTime.now()) ?? false) ? 'SCHEDULED' : 'DEPARTED',
                                           style: TextStyle(
                                             fontSize: 11,
                                             fontWeight: FontWeight.bold,
-                                            color: trip.departure.isAfter(DateTime.now()) 
+                                            color: (trip.departure?.isAfter(DateTime.now()) ?? false)
                                                 ? Colors.green.shade900 
                                                 : Colors.orange.shade900,
                                           ),
@@ -1818,9 +1768,9 @@ class AdminDeparturesPage extends StatelessWidget {
                                     ),
                                     DataCell(
                                       IconButton(
-                                        icon: const Icon(Icons.edit, size: 20),
-                                        onPressed: () => _showEditDepartureTimeDialog(context, trip, adminProvider),
-                                        tooltip: 'Edit Times',
+                                        icon: const Icon(Icons.schedule, size: 20),
+                                        onPressed: () => _showDeparturesDialog(context, adminProvider, trip),
+                                        tooltip: 'Manage Departures',
                                       ),
                                     ),
                                   ]);
@@ -1864,7 +1814,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
     try {
       final adminProvider = Provider.of<AdminProvider>(context, listen: false);
       final usersData = await adminProvider.getAllUsers();
-      final reservationsData = await adminProvider.getAllReservations();
+      final reservationsData = await adminProvider.getAllBookings();
       setState(() {
         users = usersData;
         reservations = reservationsData;
@@ -2021,29 +1971,43 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                               DataColumn(label: Text('Booked')),
                             ],
                             rows: reservations.map((reservation) {
+                              // Extract nested data
+                              final user = reservation['user'];
+                              final tripDeparture = reservation['tripDeparture'];
+                              final trip = tripDeparture?['trip'];
+                              final train = trip?['train'];
+                              final departureStation = trip?['departureStation'];
+                              final arrivalStation = trip?['arrivalStation'];
+                              final carriageType = reservation['carriageType'];
+                              
                               return DataRow(cells: [
                                 DataCell(Text('#${reservation['id']}')),
-                                DataCell(Text(reservation['user_name'] ?? 'N/A')),
-                                DataCell(Text(reservation['user_email'] ?? 'N/A')),
-                                DataCell(Text(reservation['train_name'] ?? 'N/A')),
-                                DataCell(Text('${reservation['origin_city']} → ${reservation['destination_city']}')),
-                                DataCell(Text(reservation['departure_time'] != null 
-                                    ? DateFormat('MMM dd, HH:mm').format(DateTime.parse(reservation['departure_time']))
+                                DataCell(Text(user?['fullName'] ?? 'N/A')),
+                                DataCell(Text(user?['email'] ?? 'N/A')),
+                                DataCell(Text(train?['trainNumber'] ?? 'N/A')),
+                                DataCell(Text('${departureStation?['city'] ?? 'null'} → ${arrivalStation?['city'] ?? 'null'}')),
+                                DataCell(Text(tripDeparture?['departureTime'] != null 
+                                    ? DateFormat('MMM dd, HH:mm').format(DateTime.parse(tripDeparture['departureTime']))
                                     : 'N/A')),
                                 DataCell(Text(
-                                  reservation['seat_class'] == 'first' ? '1st Class' : '2nd Class',
+                                  carriageType?['type'] ?? 'N/A',
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    color: reservation['seat_class'] == 'first' ? Colors.amber[700] : Colors.blue[700],
+                                    color: carriageType?['type'] == 'first class' ? Colors.amber[700] : Colors.blue[700],
                                   ),
                                 )),
-                                DataCell(Text('${reservation['number_of_seats']}')),
-                                DataCell(Text('\$${double.tryParse(reservation['total_price']?.toString() ?? '0')?.toStringAsFixed(2)}')),
-                                DataCell(Text(
-                                  '${_getStatusColor(reservation['status'] ?? '')} ${(reservation['status'] ?? '').toUpperCase()}',
+                                DataCell(Text('${reservation['numberOfSeats'] ?? reservation['number_of_seats'] ?? 0}')),
+                                DataCell(Text('EGP ${double.tryParse(reservation['totalPrice']?.toString() ?? reservation['total_price']?.toString() ?? '0')?.toStringAsFixed(2)}')),
+                                DataCell(Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(_getStatusColor(reservation['status'] ?? '')),
+                                    const SizedBox(width: 4),
+                                    Text((reservation['status'] ?? 'pending').toUpperCase()),
+                                  ],
                                 )),
-                                DataCell(Text(reservation['created_at'] != null 
-                                    ? DateFormat('MMM dd').format(DateTime.parse(reservation['created_at']))
+                                DataCell(Text((reservation['createdAt'] ?? reservation['created_at']) != null 
+                                    ? DateFormat('MMM dd').format(DateTime.parse(reservation['createdAt'] ?? reservation['created_at']))
                                     : 'N/A')),
                               ]);
                             }).toList(),
@@ -2051,4 +2015,668 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
       ),
     );
   }
+}
+
+// Show Departures Dialog
+void _showDeparturesDialog(BuildContext context, AdminProvider adminProvider, Trip trip) async {
+  try {
+    final departures = await adminProvider.getTripDepartures(trip.id);
+    
+    if (!context.mounted) return;
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Departures for ${trip.trainNumber}: ${trip.originCity} → ${trip.destinationCity}'),
+        content: SizedBox(
+          width: 600,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _showAddDepartureDialog(context, adminProvider, trip);
+                },
+                icon: const Icon(Icons.add),
+                label: const Text('Add Departure'),
+              ),
+              const SizedBox(height: 16),
+              if (departures.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(20.0),
+                  child: Text('No departures yet'),
+                )
+              else
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: DataTable(
+                      columns: const [
+                        DataColumn(label: Text('Departure Time')),
+                        DataColumn(label: Text('Arrival Time')),
+                        DataColumn(label: Text('Duration')),
+                        DataColumn(label: Text('Available Seats')),
+                        DataColumn(label: Text('Actions')),
+                      ],
+                      rows: departures.map((dep) {
+                        final depTimeStr = dep['departureTime'] ?? dep['departure_time'];
+                        final arrTimeStr = dep['arrivalTime'] ?? dep['arrival_time'];
+                        
+                        if (depTimeStr == null || arrTimeStr == null) {
+                          return DataRow(cells: [
+                            const DataCell(Text('N/A')),
+                            const DataCell(Text('N/A')),
+                            const DataCell(Text('N/A')),
+                            DataCell(Text('${dep['availableSeats'] ?? dep['available_seats'] ?? 0}')),
+                            const DataCell(Text('-')),
+                          ]);
+                        }
+                        
+                        final depTime = DateTime.parse(depTimeStr);
+                        final arrTime = DateTime.parse(arrTimeStr);
+                        final duration = arrTime.difference(depTime);
+                        final hours = duration.inHours;
+                        final minutes = duration.inMinutes.remainder(60);
+                        
+                        return DataRow(cells: [
+                          DataCell(Text(DateFormat('MMM dd, yyyy HH:mm').format(depTime))),
+                          DataCell(Text(DateFormat('MMM dd, yyyy HH:mm').format(arrTime))),
+                          DataCell(Text('${hours}h ${minutes}m')),
+                          DataCell(Text('${dep['availableSeats'] ?? dep['available_seats'] ?? 0}')),
+                          DataCell(Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.edit, size: 18),
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                  _showEditDepartureDialog(context, adminProvider, trip, dep);
+                                },
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete, size: 18, color: Colors.red),
+                                onPressed: () async {
+                                  final confirm = await showDialog<bool>(
+                                    context: context,
+                                    builder: (ctx) => AlertDialog(
+                                      title: const Text('Delete Departure'),
+                                      content: const Text('Are you sure you want to delete this departure?'),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(ctx, false),
+                                          child: const Text('Cancel'),
+                                        ),
+                                        ElevatedButton(
+                                          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                          onPressed: () => Navigator.pop(ctx, true),
+                                          child: const Text('Delete'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+
+                                  if (confirm == true && context.mounted) {
+                                    final response = await adminProvider.deleteTripDeparture(dep['id']);
+                                    if (context.mounted) {
+                                      Navigator.pop(context);
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text(response['message'] ?? 'Deleted')),
+                                      );
+                                      _showDeparturesDialog(context, adminProvider, trip);
+                                    }
+                                  }
+                                },
+                              ),
+                            ],
+                          )),
+                        ]);
+                      }).toList(),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  } catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading departures: $e')),
+      );
+    }
+  }
+}
+
+// Select Train for Managing Departures
+void _showSelectTripForDepartureDialog(BuildContext context, AdminProvider adminProvider) {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Select Train'),
+      content: SizedBox(
+        width: 500,
+        height: 400,
+        child: adminProvider.trains.isEmpty
+            ? const Center(child: Text('No trains available'))
+            : ListView.builder(
+                itemCount: adminProvider.trains.length,
+                itemBuilder: (context, index) {
+                  final train = adminProvider.trains[index];
+                  // Count trips for this train
+                  final trainTrips = adminProvider.trips.where((t) => t.trainId == train.id).toList();
+                  return ListTile(
+                    leading: CircleAvatar(
+                      child: Text(train.trainNumber),
+                    ),
+                    title: Text('Train ${train.trainNumber}'),
+                    subtitle: Text('${train.type} - ${trainTrips.length} routes'),
+                    trailing: Icon(Icons.arrow_forward_ios, size: 16),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _showTrainTripsDialog(context, adminProvider, train, trainTrips);
+                    },
+                  );
+                },
+              ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+      ],
+    ),
+  );
+}
+
+// Show trips for selected train
+void _showTrainTripsDialog(BuildContext context, AdminProvider adminProvider, dynamic train, List<Trip> trainTrips) {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text('Train ${train.trainNumber} - Routes & Departures'),
+      content: SizedBox(
+        width: 700,
+        height: 500,
+        child: trainTrips.isEmpty
+            ? const Center(child: Text('No routes for this train'))
+            : ListView.builder(
+                itemCount: trainTrips.length,
+                itemBuilder: (context, index) {
+                  final trip = trainTrips[index];
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: ExpansionTile(
+                      leading: const Icon(Icons.route),
+                      title: Text('${trip.originCity} → ${trip.destinationCity}'),
+                      subtitle: Text('${trip.departuresCount} departures'),
+                      trailing: ElevatedButton.icon(
+                        icon: const Icon(Icons.add, size: 16),
+                        label: const Text('Add Departure'),
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _showAddDepartureDialog(context, adminProvider, trip);
+                        },
+                      ),
+                      children: [
+                        if (trip.departures != null && trip.departures!.isNotEmpty)
+                          ...trip.departures!.map((dep) => ListTile(
+                                dense: true,
+                                leading: const Icon(Icons.schedule, size: 20),
+                                title: Text(
+                                  '${DateFormat('MMM dd, HH:mm').format(dep.departureTime)} → ${DateFormat('HH:mm').format(dep.arrivalTime)}',
+                                  style: const TextStyle(fontSize: 13),
+                                ),
+                                subtitle: Text('${dep.availableSeats} seats available'),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.edit, size: 18),
+                                      onPressed: () {
+                                        Navigator.pop(context);
+                                        _showEditDepartureDialog(context, adminProvider, trip, {
+                                          'id': dep.id,
+                                          'departureTime': dep.departureTime.toIso8601String(),
+                                          'arrivalTime': dep.arrivalTime.toIso8601String(),
+                                          'availableSeats': dep.availableSeats,
+                                        });
+                                      },
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete, size: 18, color: Colors.red),
+                                      onPressed: () async {
+                                        final confirm = await showDialog<bool>(
+                                          context: context,
+                                          builder: (ctx) => AlertDialog(
+                                            title: const Text('Delete Departure'),
+                                            content: const Text('Are you sure?'),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.pop(ctx, false),
+                                                child: const Text('Cancel'),
+                                              ),
+                                              ElevatedButton(
+                                                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                                onPressed: () => Navigator.pop(ctx, true),
+                                                child: const Text('Delete'),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                        if (confirm == true) {
+                                          await adminProvider.deleteTripDeparture(dep.id);
+                                          if (context.mounted) {
+                                            Navigator.pop(context);
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(content: Text('Departure deleted')),
+                                            );
+                                          }
+                                        }
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ))
+                        else
+                          const Padding(
+                            padding: EdgeInsets.all(16.0),
+                            child: Text('No departures yet', style: TextStyle(fontStyle: FontStyle.italic)),
+                          ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Close'),
+        ),
+      ],
+    ),
+  );
+}
+
+// Add Departure Dialog
+void _showAddDepartureDialog(BuildContext context, AdminProvider adminProvider, Trip trip) {
+  DateTime selectedDepartureDate = DateTime.now();
+  TimeOfDay selectedDepartureTime = TimeOfDay.now();
+  DateTime selectedArrivalDate = DateTime.now();
+  TimeOfDay selectedArrivalTime = TimeOfDay(hour: TimeOfDay.now().hour + 2, minute: TimeOfDay.now().minute);
+  final availableSeatsController = TextEditingController(text: trip.quantities.toString());
+
+  showDialog(
+    context: context,
+    builder: (context) => StatefulBuilder(
+      builder: (context, setState) => AlertDialog(
+        title: Text('Add Departure for ${trip.trainNumber}'),
+        content: SizedBox(
+          width: 400,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Route: ${trip.originCity} → ${trip.destinationCity}', 
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 20),
+                
+                // Departure Date & Time
+                const Text('Departure', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          final date = await showDatePicker(
+                            context: context,
+                            initialDate: selectedDepartureDate,
+                            firstDate: DateTime.now(),
+                            lastDate: DateTime.now().add(const Duration(days: 365)),
+                          );
+                          if (date != null) {
+                            setState(() => selectedDepartureDate = date);
+                          }
+                        },
+                        icon: const Icon(Icons.calendar_today),
+                        label: Text(DateFormat('MMM dd, yyyy').format(selectedDepartureDate)),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          final time = await showTimePicker(
+                            context: context,
+                            initialTime: selectedDepartureTime,
+                          );
+                          if (time != null) {
+                            setState(() => selectedDepartureTime = time);
+                          }
+                        },
+                        icon: const Icon(Icons.access_time),
+                        label: Text(selectedDepartureTime.format(context)),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                
+                // Arrival Date & Time
+                const Text('Arrival', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          final date = await showDatePicker(
+                            context: context,
+                            initialDate: selectedArrivalDate,
+                            firstDate: selectedDepartureDate,
+                            lastDate: DateTime.now().add(const Duration(days: 365)),
+                          );
+                          if (date != null) {
+                            setState(() => selectedArrivalDate = date);
+                          }
+                        },
+                        icon: const Icon(Icons.calendar_today),
+                        label: Text(DateFormat('MMM dd, yyyy').format(selectedArrivalDate)),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          final time = await showTimePicker(
+                            context: context,
+                            initialTime: selectedArrivalTime,
+                          );
+                          if (time != null) {
+                            setState(() => selectedArrivalTime = time);
+                          }
+                        },
+                        icon: const Icon(Icons.access_time),
+                        label: Text(selectedArrivalTime.format(context)),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                
+                // Available Seats
+                TextField(
+                  controller: availableSeatsController,
+                  decoration: const InputDecoration(
+                    labelText: 'Available Seats',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final departureDateTime = DateTime(
+                selectedDepartureDate.year,
+                selectedDepartureDate.month,
+                selectedDepartureDate.day,
+                selectedDepartureTime.hour,
+                selectedDepartureTime.minute,
+              );
+              
+              final arrivalDateTime = DateTime(
+                selectedArrivalDate.year,
+                selectedArrivalDate.month,
+                selectedArrivalDate.day,
+                selectedArrivalTime.hour,
+                selectedArrivalTime.minute,
+              );
+
+              if (arrivalDateTime.isBefore(departureDateTime)) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Arrival time must be after departure time')),
+                );
+                return;
+              }
+
+              final seats = int.tryParse(availableSeatsController.text) ?? 0;
+              if (seats <= 0) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Available seats must be greater than 0')),
+                );
+                return;
+              }
+
+              Navigator.pop(context);
+
+              final response = await adminProvider.createTripDeparture(
+                tripId: trip.id,
+                departureTime: departureDateTime,
+                arrivalTime: arrivalDateTime,
+                availableSeats: seats,
+              );
+
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(response['message'] ?? 'Departure added')),
+                );
+                if (response['success']) {
+                  _showDeparturesDialog(context, adminProvider, trip);
+                }
+              }
+            },
+            child: const Text('Add Departure'),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+// Edit Departure Dialog
+void _showEditDepartureDialog(BuildContext context, AdminProvider adminProvider, Trip trip, Map<String, dynamic> departure) {
+  final depTime = DateTime.parse(departure['departureTime'] ?? departure['departure_time']);
+  final arrTime = DateTime.parse(departure['arrivalTime'] ?? departure['arrival_time']);
+  
+  DateTime selectedDepartureDate = DateTime(depTime.year, depTime.month, depTime.day);
+  TimeOfDay selectedDepartureTime = TimeOfDay(hour: depTime.hour, minute: depTime.minute);
+  DateTime selectedArrivalDate = DateTime(arrTime.year, arrTime.month, arrTime.day);
+  TimeOfDay selectedArrivalTime = TimeOfDay(hour: arrTime.hour, minute: arrTime.minute);
+  final availableSeatsController = TextEditingController(
+    text: (departure['availableSeats'] ?? departure['available_seats'] ?? 0).toString()
+  );
+
+  showDialog(
+    context: context,
+    builder: (context) => StatefulBuilder(
+      builder: (context, setState) => AlertDialog(
+        title: Text('Edit Departure for ${trip.trainNumber}'),
+        content: SizedBox(
+          width: 400,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Route: ${trip.originCity} → ${trip.destinationCity}', 
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 20),
+                
+                // Departure Date & Time
+                const Text('Departure', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          final date = await showDatePicker(
+                            context: context,
+                            initialDate: selectedDepartureDate,
+                            firstDate: DateTime.now(),
+                            lastDate: DateTime.now().add(const Duration(days: 365)),
+                          );
+                          if (date != null) {
+                            setState(() => selectedDepartureDate = date);
+                          }
+                        },
+                        icon: const Icon(Icons.calendar_today),
+                        label: Text(DateFormat('MMM dd, yyyy').format(selectedDepartureDate)),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          final time = await showTimePicker(
+                            context: context,
+                            initialTime: selectedDepartureTime,
+                          );
+                          if (time != null) {
+                            setState(() => selectedDepartureTime = time);
+                          }
+                        },
+                        icon: const Icon(Icons.access_time),
+                        label: Text(selectedDepartureTime.format(context)),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                
+                // Arrival Date & Time
+                const Text('Arrival', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          final date = await showDatePicker(
+                            context: context,
+                            initialDate: selectedArrivalDate,
+                            firstDate: selectedDepartureDate,
+                            lastDate: DateTime.now().add(const Duration(days: 365)),
+                          );
+                          if (date != null) {
+                            setState(() => selectedArrivalDate = date);
+                          }
+                        },
+                        icon: const Icon(Icons.calendar_today),
+                        label: Text(DateFormat('MMM dd, yyyy').format(selectedArrivalDate)),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          final time = await showTimePicker(
+                            context: context,
+                            initialTime: selectedArrivalTime,
+                          );
+                          if (time != null) {
+                            setState(() => selectedArrivalTime = time);
+                          }
+                        },
+                        icon: const Icon(Icons.access_time),
+                        label: Text(selectedArrivalTime.format(context)),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                
+                // Available Seats
+                TextField(
+                  controller: availableSeatsController,
+                  decoration: const InputDecoration(
+                    labelText: 'Available Seats',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final departureDateTime = DateTime(
+                selectedDepartureDate.year,
+                selectedDepartureDate.month,
+                selectedDepartureDate.day,
+                selectedDepartureTime.hour,
+                selectedDepartureTime.minute,
+              );
+              
+              final arrivalDateTime = DateTime(
+                selectedArrivalDate.year,
+                selectedArrivalDate.month,
+                selectedArrivalDate.day,
+                selectedArrivalTime.hour,
+                selectedArrivalTime.minute,
+              );
+
+              if (arrivalDateTime.isBefore(departureDateTime)) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Arrival time must be after departure time')),
+                );
+                return;
+              }
+
+              final seats = int.tryParse(availableSeatsController.text) ?? 0;
+              if (seats <= 0) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Available seats must be greater than 0')),
+                );
+                return;
+              }
+
+              Navigator.pop(context);
+
+              final response = await adminProvider.updateTripDeparture(
+                id: departure['id'],
+                departureTime: departureDateTime,
+                arrivalTime: arrivalDateTime,
+                availableSeats: seats,
+              );
+
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(response['message'] ?? 'Departure updated')),
+                );
+                if (response['success']) {
+                  _showDeparturesDialog(context, adminProvider, trip);
+                }
+              }
+            },
+            child: const Text('Update Departure'),
+          ),
+        ],
+      ),
+    ),
+  );
 }

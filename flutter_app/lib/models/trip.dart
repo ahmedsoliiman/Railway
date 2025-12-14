@@ -1,7 +1,9 @@
+import 'trip_departure.dart';
+
 class Trip {
   final int id;
   final int trainId;
-  final String trainName;
+  final String? trainName;
   final String trainNumber;
   final String trainType;
   final String? trainFacilities;
@@ -11,18 +13,19 @@ class Trip {
   final int destinationStationId;
   final String destinationName;
   final String destinationCity;
-  final DateTime departure;
-  final DateTime departureTime;
-  final DateTime arrivalTime;
+  final DateTime? departure;
+  final DateTime? departureTime;
+  final DateTime? arrivalTime;
   final double? firstClassPrice;
   final double? secondClassPrice;
   final double? economicPrice;
   final int quantities;
+  final List<TripDeparture>? departures;
 
   Trip({
     required this.id,
     required this.trainId,
-    required this.trainName,
+    this.trainName,
     required this.trainNumber,
     required this.trainType,
     this.trainFacilities,
@@ -32,13 +35,14 @@ class Trip {
     required this.destinationStationId,
     required this.destinationName,
     required this.destinationCity,
-    required this.departure,
-    required this.departureTime,
-    required this.arrivalTime,
+    this.departure,
+    this.departureTime,
+    this.arrivalTime,
     this.firstClassPrice,
     this.secondClassPrice,
     this.economicPrice,
     required this.quantities,
+    this.departures,
   });
 
   factory Trip.fromJson(Map<String, dynamic> json) {
@@ -47,19 +51,37 @@ class Trip {
     final departureStationData = json['departureStation'];
     final arrivalStationData = json['arrivalStation'];
     
-    // Parse departure time first
+    // Parse departure time if available
     final departureTimeStr = json['departureTime'] ?? json['departure_time'];
-    final parsedDepartureTime = DateTime.parse(departureTimeStr);
+    final arrivalTimeStr = json['arrivalTime'] ?? json['arrival_time'];
     
-    // If departure field exists, use it; otherwise extract date from departureTime
-    final departure = json['departure'] != null 
-        ? DateTime.parse(json['departure'])
-        : DateTime(parsedDepartureTime.year, parsedDepartureTime.month, parsedDepartureTime.day);
+    DateTime? parsedDepartureTime;
+    DateTime? parsedArrivalTime;
+    DateTime? departure;
+    
+    if (departureTimeStr != null) {
+      parsedDepartureTime = DateTime.parse(departureTimeStr);
+      departure = json['departure'] != null 
+          ? DateTime.parse(json['departure'])
+          : DateTime(parsedDepartureTime.year, parsedDepartureTime.month, parsedDepartureTime.day);
+    }
+    
+    if (arrivalTimeStr != null) {
+      parsedArrivalTime = DateTime.parse(arrivalTimeStr);
+    }
+
+    // Parse departures array if present
+    List<TripDeparture>? departures;
+    if (json['departures'] != null && json['departures'] is List) {
+      departures = (json['departures'] as List)
+          .map((d) => TripDeparture.fromJson(d))
+          .toList();
+    }
     
     return Trip(
       id: json['id'],
       trainId: json['trainId'] ?? json['train_id'] ?? trainData?['id'] ?? 0,
-      trainName: trainData?['name'] ?? json['train_name'] ?? '',
+      trainName: trainData?['name'] ?? json['train_name'],
       trainNumber: trainData?['trainNumber'] ?? trainData?['train_number'] ?? json['train_number'] ?? '',
       trainType: trainData?['type'] ?? json['train_type'] ?? 'Standard',
       trainFacilities: trainData?['facilities'] ?? json['train_facilities'],
@@ -71,7 +93,7 @@ class Trip {
       destinationCity: arrivalStationData?['city'] ?? json['destination_city'] ?? '',
       departure: departure,
       departureTime: parsedDepartureTime,
-      arrivalTime: DateTime.parse(json['arrivalTime'] ?? json['arrival_time']),
+      arrivalTime: parsedArrivalTime,
       firstClassPrice: (json['firstClassPrice'] ?? json['first_class_price']) != null 
           ? double.parse((json['firstClassPrice'] ?? json['first_class_price']).toString()) 
           : null,
@@ -82,38 +104,63 @@ class Trip {
           ? double.parse((json['economicPrice'] ?? json['economic_price']).toString()) 
           : null,
       quantities: json['quantities'] ?? json['availableSeats'] ?? json['available_seats'] ?? 0,
+      departures: departures,
     );
   }
 
-  Duration get duration {
-    return arrivalTime.difference(departureTime);
+  // Convenience getters that return the first departure's time if no direct time is set
+  DateTime? get effectiveDepartureTime {
+    if (departureTime != null) return departureTime;
+    if (departures != null && departures!.isNotEmpty) {
+      return departures!.first.departureTime;
+    }
+    return null;
+  }
+
+  DateTime? get effectiveArrivalTime {
+    if (arrivalTime != null) return arrivalTime;
+    if (departures != null && departures!.isNotEmpty) {
+      return departures!.first.arrivalTime;
+    }
+    return null;
+  }
+
+  Duration? get duration {
+    final depTime = effectiveDepartureTime;
+    final arrTime = effectiveArrivalTime;
+    if (depTime == null || arrTime == null) return null;
+    return arrTime.difference(depTime);
   }
 
   String get durationFormatted {
-    final hours = duration.inHours;
-    final minutes = duration.inMinutes.remainder(60);
+    if (duration == null) return 'N/A';
+    final hours = duration!.inHours;
+    final minutes = duration!.inMinutes.remainder(60);
     return '${hours}h ${minutes}m';
   }
+
+  int get departuresCount => departures?.length ?? 0;
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
       'train_id': trainId,
-      'train_name': trainName,
+      if (trainName != null) 'train_name': trainName,
       'train_number': trainNumber,
       'train_type': trainType,
-      'train_facilities': trainFacilities,
+      if (trainFacilities != null) 'train_facilities': trainFacilities,
       'origin_station_id': originStationId,
       'origin_name': originName,
       'origin_city': originCity,
       'destination_station_id': destinationStationId,
       'destination_name': destinationName,
       'destination_city': destinationCity,
-      'departure': departure.toIso8601String().split('T')[0],
-      'departure_time': departureTime.toIso8601String(),
-      'arrival_time': arrivalTime.toIso8601String(),
-      'first_class_price': firstClassPrice,
-      'second_class_price': secondClassPrice,
+      if (departure != null) 'departure': departure!.toIso8601String().split('T')[0],
+      if (departureTime != null) 'departure_time': departureTime!.toIso8601String(),
+      if (arrivalTime != null) 'arrival_time': arrivalTime!.toIso8601String(),
+      if (firstClassPrice != null) 'first_class_price': firstClassPrice,
+      if (secondClassPrice != null) 'second_class_price': secondClassPrice,
+      if (economicPrice != null) 'economic_price': economicPrice,
       'quantities': quantities,
     };
   }

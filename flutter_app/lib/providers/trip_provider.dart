@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/trip.dart';
 import '../models/station.dart';
-import '../models/reservation.dart';
+import '../models/booking.dart';
 import '../services/api_service.dart';
 
 class TripProvider with ChangeNotifier {
@@ -9,14 +9,14 @@ class TripProvider with ChangeNotifier {
 
   List<Trip> _trips = [];
   List<Station> _stations = [];
-  List<Reservation> _reservations = [];
+  List<Booking> _bookings = [];
   Trip? _selectedTrip;
   bool _isLoading = false;
   String? _error;
 
   List<Trip> get trips => _trips;
   List<Station> get stations => _stations;
-  List<Reservation> get reservations => _reservations;
+  List<Booking> get bookings => _bookings;
   Trip? get selectedTrip => _selectedTrip;
   bool get isLoading => _isLoading;
   String? get error => _error;
@@ -119,8 +119,8 @@ class TripProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // Create reservation
-  Future<Map<String, dynamic>> createReservation({
+  // Create Booking
+  Future<Map<String, dynamic>> createBooking({
     required int tripId,
     required String seatClass,
     required int numberOfSeats,
@@ -128,7 +128,7 @@ class TripProvider with ChangeNotifier {
     _setLoading(true);
     _setError(null);
 
-    final response = await _apiService.createReservation(
+    final response = await _apiService.createBooking(
       tripId: tripId,
       seatClass: seatClass,
       numberOfSeats: numberOfSeats,
@@ -137,8 +137,8 @@ class TripProvider with ChangeNotifier {
     _setLoading(false);
 
     if (response['success']) {
-      // Reload reservations
-      await loadReservations();
+      // Reload bookings
+      await loadBookings();
     } else {
       _setError(response['message']);
     }
@@ -146,32 +146,32 @@ class TripProvider with ChangeNotifier {
     return response;
   }
 
-  // Load user reservations
-  Future<void> loadReservations() async {
+  // Load user bookings
+  Future<void> loadBookings() async {
     _setLoading(true);
     _setError(null);
 
     try {
-      _reservations = await _apiService.getMyReservations();
+      _bookings = await _apiService.getMyBookings();
     } catch (e) {
-      _setError('Failed to load reservations: $e');
+      _setError('Failed to load bookings: $e');
     } finally {
       _setLoading(false);
     }
   }
 
-  // Cancel reservation
-  Future<Map<String, dynamic>> cancelReservation(int reservationId) async {
+  // Cancel Booking
+  Future<Map<String, dynamic>> cancelBooking(int bookingId) async {
     _setLoading(true);
     _setError(null);
 
-    final response = await _apiService.cancelReservation(reservationId);
+    final response = await _apiService.cancelBooking(bookingId);
 
     _setLoading(false);
 
     if (response['success']) {
-      // Reload reservations
-      await loadReservations();
+      // Reload bookings
+      await loadBookings();
     } else {
       _setError(response['message']);
     }
@@ -179,21 +179,21 @@ class TripProvider with ChangeNotifier {
     return response;
   }
 
-  // Get upcoming reservations
-  List<Reservation> get upcomingReservations {
-    return _reservations.where((reservation) {
-      if (reservation.status == 'cancelled') return false;
-      if (reservation.departureTime == null) return false;
-      return reservation.departureTime!.isAfter(DateTime.now());
+  // Get upcoming bookings
+  List<Booking> get upcomingBookings {
+    return _bookings.where((booking) {
+      if (booking.status == 'cancelled') return false;
+      if (booking.departureTime == null) return false;
+      return booking.departureTime!.isAfter(DateTime.now());
     }).toList();
   }
 
-  // Get past reservations
-  List<Reservation> get pastReservations {
-    return _reservations.where((reservation) {
-      if (reservation.status == 'cancelled') return true;
-      if (reservation.departureTime == null) return false;
-      return reservation.departureTime!.isBefore(DateTime.now());
+  // Get past bookings
+  List<Booking> get pastBookings {
+    return _bookings.where((booking) {
+      if (booking.status == 'cancelled') return true;
+      if (booking.departureTime == null) return false;
+      return booking.departureTime!.isBefore(DateTime.now());
     }).toList();
   }
 
