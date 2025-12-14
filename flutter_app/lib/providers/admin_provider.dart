@@ -187,10 +187,12 @@ class AdminProvider with ChangeNotifier {
   Future<Map<String, dynamic>> createCarriage({
     required String carriageNumber,
     required int carriageTypeId,
+    String? model,
   }) async {
     final response = await _adminService.createCarriage(
       carriageNumber: carriageNumber,
       carriageTypeId: carriageTypeId,
+      model: model,
     );
 
     if (response['success']) {
@@ -204,11 +206,13 @@ class AdminProvider with ChangeNotifier {
     required int id,
     String? carriageNumber,
     int? carriageTypeId,
+    String? model,
   }) async {
     final response = await _adminService.updateCarriage(
       id: id,
       carriageNumber: carriageNumber,
       carriageTypeId: carriageTypeId,
+      model: model,
     );
 
     if (response['success']) {

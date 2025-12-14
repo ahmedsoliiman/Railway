@@ -261,6 +261,7 @@ class AdminService {
   Future<Map<String, dynamic>> createCarriage({
     required String carriageNumber,
     required int carriageTypeId,
+    String? model,
   }) async {
     try {
       final headers = await _getHeaders();
@@ -268,8 +269,9 @@ class AdminService {
         Uri.parse('${AppConfig.baseUrl}/admin/carriages'),
         headers: headers,
         body: json.encode({
-          'carriage_number': carriageNumber,
-          'carriage_type_id': carriageTypeId,
+          'carriageNumber': carriageNumber,
+          'carriageTypeId': carriageTypeId,
+          if (model != null) 'model': model,
         }),
       );
 
@@ -286,6 +288,7 @@ class AdminService {
     required int id,
     String? carriageNumber,
     int? carriageTypeId,
+    String? model,
   }) async {
     try {
       final headers = await _getHeaders();
@@ -293,8 +296,9 @@ class AdminService {
         Uri.parse('${AppConfig.baseUrl}/admin/carriages/$id'),
         headers: headers,
         body: json.encode({
-          if (carriageNumber != null) 'carriage_number': carriageNumber,
-          if (carriageTypeId != null) 'carriage_type_id': carriageTypeId,
+          if (carriageNumber != null) 'carriageNumber': carriageNumber,
+          if (carriageTypeId != null) 'carriageTypeId': carriageTypeId,
+          if (model != null) 'model': model,
         }),
       );
 
@@ -372,7 +376,7 @@ class AdminService {
         Uri.parse('${AppConfig.baseUrl}/admin/trains'),
         headers: headers,
         body: json.encode({
-          'train_number': trainNumber,
+          'trainNumber': trainNumber,
           'type': type,
           'carriages': carriages,
           'status': status ?? 'active',
@@ -414,7 +418,7 @@ class AdminService {
         Uri.parse('${AppConfig.baseUrl}/admin/trains/$id'),
         headers: headers,
         body: json.encode({
-          if (trainNumber != null) 'train_number': trainNumber,
+          if (trainNumber != null) 'trainNumber': trainNumber,
           if (type != null) 'type': type,
           if (carriages != null) 'carriages': carriages,
           if (status != null) 'status': status,

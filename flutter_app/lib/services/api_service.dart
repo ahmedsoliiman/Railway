@@ -323,6 +323,37 @@ class ApiService {
     }
   }
 
+  Future<Map<String, dynamic>> processPayment({
+    required int bookingId,
+    required String paymentMethod,
+    String? cardNumber,
+    String? cardHolder,
+    String? expiryDate,
+    String? cvv,
+  }) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.post(
+        Uri.parse('${AppConfig.baseUrl}${AppConfig.reservationsEndpoint}/$bookingId/payment'),
+        headers: headers,
+        body: jsonEncode({
+          'paymentMethod': paymentMethod,
+          if (cardNumber != null) 'cardNumber': cardNumber,
+          if (cardHolder != null) 'cardHolder': cardHolder,
+          if (expiryDate != null) 'expiryDate': expiryDate,
+          if (cvv != null) 'cvv': cvv,
+        }),
+      );
+
+      print('💳 Payment response: ${response.statusCode}');
+      print('💳 Response body: ${response.body}');
+      return jsonDecode(response.body);
+    } catch (e) {
+      print('❌ Process payment error: $e');
+      return {'success': false, 'message': 'Network error: $e'};
+    }
+  }
+
   // Profile APIs
   Future<Map<String, dynamic>> updateProfile({
     String? fullName,

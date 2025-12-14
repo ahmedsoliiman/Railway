@@ -2,6 +2,7 @@ class Carriage {
   final int id;
   final String name; // carriage_number from backend
   final int carriageTypeId;
+  final String? model;
   final CarriageType? carriageType;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -10,6 +11,7 @@ class Carriage {
     required this.id,
     required this.name,
     required this.carriageTypeId,
+    this.model,
     this.carriageType,
     this.createdAt,
     this.updatedAt,
@@ -27,6 +29,7 @@ class Carriage {
       id: json['id'] ?? 0,
       name: json['carriageNumber'] ?? json['carriage_number'] ?? json['name'] ?? '',
       carriageTypeId: json['carriageTypeId'] ?? json['carriage_type_id'] ?? 0,
+      model: json['model'],
       carriageType: json['carriageType'] != null ? CarriageType.fromJson(json['carriageType']) :
                     (json['carriage_type'] != null ? CarriageType.fromJson(json['carriage_type']) : null),
       createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : 
@@ -41,6 +44,7 @@ class Carriage {
       'id': id,
       'carriage_number': name,
       'carriage_type_id': carriageTypeId,
+      'model': model,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };

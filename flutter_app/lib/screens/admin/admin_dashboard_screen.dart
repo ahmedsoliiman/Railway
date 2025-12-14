@@ -532,6 +532,7 @@ class AdminCarriagesPage extends StatelessWidget {
     }
     
     final carriageNumberController = TextEditingController(text: carriage?.carriageNumber);
+    final modelController = TextEditingController(text: carriage?.model);
     int? selectedCarriageTypeId = carriage?.carriageTypeId ?? (adminProvider.carriageTypes.isNotEmpty ? adminProvider.carriageTypes.first.id : null);
 
     showDialog(
@@ -559,13 +560,13 @@ class AdminCarriagesPage extends StatelessWidget {
                   DropdownButtonFormField<int>(
                     value: selectedCarriageTypeId,
                     decoration: const InputDecoration(
-                      labelText: 'Carriage Type *',
+                      labelText: 'Class Type *',
                       border: OutlineInputBorder(),
                     ),
                     items: adminProvider.carriageTypes.map((type) {
                       return DropdownMenuItem<int>(
                         value: type.id,
-                        child: Text('${type.typeDisplay} (${type.capacity} seats - EGP ${type.price})'),
+                        child: Text('${type.typeDisplay} - ${type.capacity} seats'),
                       );
                     }).toList(),
                     onChanged: (value) {
@@ -573,6 +574,15 @@ class AdminCarriagesPage extends StatelessWidget {
                         selectedCarriageTypeId = value;
                       });
                     },
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: modelController,
+                    decoration: const InputDecoration(
+                      labelText: 'Model',
+                      border: OutlineInputBorder(),
+                      hintText: 'e.g., Siemens Velaro, Talgo',
+                    ),
                   ),
                 ],
               ),
@@ -596,11 +606,13 @@ class AdminCarriagesPage extends StatelessWidget {
                     ? await adminProvider.createCarriage(
                         carriageNumber: carriageNumberController.text,
                         carriageTypeId: selectedCarriageTypeId!,
+                        model: modelController.text.isNotEmpty ? modelController.text : null,
                       )
                     : await adminProvider.updateCarriage(
                         id: carriage.id,
                         carriageNumber: carriageNumberController.text,
                         carriageTypeId: selectedCarriageTypeId!,
+                        model: modelController.text.isNotEmpty ? modelController.text : null,
                       );
 
                 if (context.mounted) {
@@ -694,6 +706,7 @@ class AdminCarriagesPage extends StatelessWidget {
                             DataColumn(label: Text('Carriage Number', style: TextStyle(fontWeight: FontWeight.bold))),
                             DataColumn(label: Text('Type', style: TextStyle(fontWeight: FontWeight.bold))),
                             DataColumn(label: Text('Capacity', style: TextStyle(fontWeight: FontWeight.bold))),
+                            DataColumn(label: Text('Model', style: TextStyle(fontWeight: FontWeight.bold))),
                             DataColumn(label: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold))),
                       ],
                       rows: adminProvider.carriages.map((carriage) {
@@ -734,6 +747,7 @@ class AdminCarriagesPage extends StatelessWidget {
                             ),
                           ),
                           DataCell(Text((carriage.carriageType?.capacity ?? 0).toString())),
+                          DataCell(Text(carriage.model ?? '-')),
                           DataCell(
                             Row(
                               mainAxisSize: MainAxisSize.min,
@@ -897,7 +911,7 @@ class AdminTrainsPage extends StatelessWidget {
                             child: Row(
                               children: [
                                 Expanded(
-                                  child: Text('${carriage.name} (${carriage.seatsCount} seats each)'),
+                                  child: Text('${carriage.carriageNumber} - ${carriage.carriageType?.typeDisplay ?? "Unknown"} (${carriage.seatsCount} seats${carriage.model != null ? ", ${carriage.model}" : ""})'),
                                 ),
                                 Row(
                                   mainAxisSize: MainAxisSize.min,
@@ -940,7 +954,7 @@ class AdminTrainsPage extends StatelessWidget {
                         if (adminProvider.carriages.where((c) => !selectedCarriages.containsKey(c.id)).isNotEmpty)
                           DropdownButtonFormField<int>(
                             key: ValueKey(selectedCarriages.length),
-                            value: selectedCarriageToAdd,
+                            initialValue: selectedCarriageToAdd,
                             decoration: const InputDecoration(
                               labelText: 'Add Carriage',
                               border: OutlineInputBorder(),
@@ -954,7 +968,7 @@ class AdminTrainsPage extends StatelessWidget {
                                   .where((c) => !selectedCarriages.containsKey(c.id))
                                   .map((c) => DropdownMenuItem(
                                         value: c.id,
-                                        child: Text('${c.carriageNumber} (${c.carriageType?.typeDisplay ?? 'Unknown'}, ${c.carriageType?.capacity ?? 0} seats)'),
+                                        child: Text('${c.carriageNumber} - ${c.carriageType?.typeDisplay ?? 'Unknown'} (${c.carriageType?.capacity ?? 0} seats${c.model != null ? ", ${c.model}" : ""})'),
                                       ))
                             ],
                             onChanged: (carriageId) {
