@@ -1,6 +1,6 @@
 class AppConfig {
   // API Configuration
-  static const String baseUrl = 'http://localhost:3001/api'; // For Chrome/Web
+  static const String baseUrl = 'http://localhost:3000/api'; // For Chrome/Web
   // static const String baseUrl = 'http://10.0.2.2:3000/api'; // For Android Emulator
   // static const String baseUrl = 'http://YOUR_IP:3000/api'; // For Physical Device
   
@@ -21,7 +21,7 @@ class AppConfig {
   static const String meEndpoint = '/auth/me';
   static const String tripsEndpoint = '/trips';
   static const String stationsEndpoint = '/stations';
-  static const String reservationsEndpoint = '/reservations';
+  static const String reservationsEndpoint = '/user/reservations';
   static const String profileEndpoint = '/profile';
   
   // Timeouts

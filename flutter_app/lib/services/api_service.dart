@@ -255,14 +255,17 @@ class ApiService {
         Uri.parse('${AppConfig.baseUrl}${AppConfig.reservationsEndpoint}'),
         headers: headers,
         body: jsonEncode({
-          'trip_id': tripId,
-          'seat_class': seatClass,
-          'number_of_seats': numberOfSeats,
+          'tourId': tripId,
+          'seatClass': seatClass,
+          'numberOfSeats': numberOfSeats,
         }),
       );
 
+      print('📝 Creating booking response: ${response.statusCode}');
+      print('📝 Response body: ${response.body}');
       return jsonDecode(response.body);
     } catch (e) {
+      print('❌ Create booking error: $e');
       return {'success': false, 'message': 'Network error: $e'};
     }
   }
