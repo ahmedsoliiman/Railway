@@ -1,4 +1,4 @@
-const { Reservation, Trip, Train, Station, User, sequelize } = require('../models');
+const { Booking, Trip, Train, Station, User, TripDeparture, sequelize } = require('../models');
 const crypto = require('crypto');
 const emailService = require('../utils/emailService');
 
@@ -12,16 +12,22 @@ const generateBookingReference = () => {
 // @access  Private
 exports.getUserReservations = async (req, res) => {
   try {
-    const reservations = await Reservation.findAll({
+    const reservations = await Booking.findAll({
       where: { user_id: req.user.id },
       include: [
         {
-          model: Trip,
-          as: 'trip',
+          model: TripDeparture,
+          as: 'tripDeparture',
           include: [
-            { model: Train, as: 'train' },
-            { model: Station, as: 'departureStation' },
-            { model: Station, as: 'arrivalStation' },
+            {
+              model: Trip,
+              as: 'trip',
+              include: [
+                { model: Train, as: 'train' },
+                { model: Station, as: 'departureStation' },
+                { model: Station, as: 'arrivalStation' },
+              ],
+            },
           ],
         },
       ],
@@ -38,21 +44,23 @@ exports.getUserReservations = async (req, res) => {
         totalPrice: parseFloat(r.total_price),
         bookingReference: r.booking_reference,
         status: r.status,
-        trip: {
-          id: r.trip.id,
-          departureTime: r.trip.departure_time,
-          arrivalTime: r.trip.arrival_time,
-          train: {
-            trainNumber: r.trip.train.train_number,
-            name: r.trip.train.name,
-          },
-          departureStation: {
-            name: r.trip.departureStation.name,
-            city: r.trip.departureStation.city,
-          },
-          arrivalStation: {
-            name: r.trip.arrivalStation.name,
-            city: r.trip.arrivalStation.city,
+        tripDeparture: {
+          id: r.tripDeparture.trip_departure_id,
+          departureTime: r.tripDeparture.departure_time,
+          arrivalTime: r.tripDeparture.arrival_time,
+          trip: {
+            id: r.tripDeparture.trip.id,
+            train: {
+              trainNumber: r.tripDeparture.trip.train.train_number,
+            },
+            departureStation: {
+              name: r.tripDeparture.trip.departureStation.name,
+              city: r.tripDeparture.trip.departureStation.city,
+            },
+            arrivalStation: {
+              name: r.tripDeparture.trip.arrivalStation.name,
+              city: r.tripDeparture.trip.arrivalStation.city,
+            },
           },
         },
         createdAt: r.created_at,
@@ -67,35 +75,38 @@ exports.getUserReservations = async (req, res) => {
   }
 };
 
-// @desc    Create reservation (initial booking - pending payment)
+// @desc    Create Booking (initial booking - pending payment)
 // @route   POST /api/user/reservations
 // @access  Private
 exports.createReservation = async (req, res) => {
   const t = await sequelize.transaction();
 
   try {
-    const { tourId, seatClass, numberOfSeats = 1 } = req.body;
+    const { tourId, tripDepartureId, seatClass, numberOfSeats = 1 } = req.body;
 
     // Validation
     if (!tourId || !seatClass) {
       await t.rollback();
       return res.status(400).json({
         success: false,
-        message: 'Please provide all required fields',
+        message: 'Please provide all required fields (tourId, seatClass)',
       });
     }
 
-    if (!['first', 'second'].includes(seatClass)) {
+    if (!['first', 'second', 'economic'].includes(seatClass.toLowerCase())) {
       await t.rollback();
       return res.status(400).json({
         success: false,
-        message: 'Invalid seat class. Must be first or second',
+        message: 'Invalid seat class. Must be first, second, or economic',
       });
     }
 
-    // Get trip with train info
+    // Get trip with pricing info
     const trip = await Trip.findByPk(tourId, {
-      include: [{ model: Train, as: 'train' }],
+      include: [
+        { model: Train, as: 'train' },
+        { model: TripDeparture, as: 'departures' }
+      ],
       transaction: t,
       lock: t.LOCK.UPDATE,
     });
@@ -108,32 +119,74 @@ exports.createReservation = async (req, res) => {
       });
     }
 
-    // Check availability
-    const availableSeats =
-      seatClass === 'first'
-        ? trip.available_first_class_seats
-        : trip.available_second_class_seats;
-
-    if (availableSeats <= 0) {
-      await t.rollback();
-      return res.status(400).json({
-        success: false,
-        message: `No available ${seatClass} class seats for this trip`,
+    // Find the specific departure or use the first available one
+    let departure;
+    if (tripDepartureId) {
+      departure = await TripDeparture.findOne({
+        where: { trip_departure_id: tripDepartureId, trip_id: tourId },
+        transaction: t,
+        lock: t.LOCK.UPDATE,
+      });
+    } else {
+      // If no specific departure is provided, use the first available future departure
+      departure = await TripDeparture.findOne({
+        where: {
+          trip_id: tourId,
+          departure_time: { [sequelize.Op.gt]: new Date() }
+        },
+        order: [['departure_time', 'ASC']],
+        transaction: t,
+        lock: t.LOCK.UPDATE,
       });
     }
 
-    // Get price per seat
-    const pricePerSeat = seatClass === 'first' ? trip.first_class_price : trip.second_class_price;
+    if (!departure) {
+      await t.rollback();
+      return res.status(404).json({
+        success: false,
+        message: 'No available departure found for this trip',
+      });
+    }
+
+    // Check seat availability
+    if (departure.available_seats < numberOfSeats) {
+      await t.rollback();
+      return res.status(400).json({
+        success: false,
+        message: `Only ${departure.available_seats} seats available for this departure`,
+      });
+    }
+
+    // Get price per seat based on class
+    let pricePerSeat;
+    const seatClassLower = seatClass.toLowerCase();
+    if (seatClassLower === 'first') {
+      pricePerSeat = trip.first_class_price;
+    } else if (seatClassLower === 'second') {
+      pricePerSeat = trip.second_class_price;
+    } else if (seatClassLower === 'economic') {
+      pricePerSeat = trip.economic_price;
+    }
+
+    if (!pricePerSeat || pricePerSeat <= 0) {
+      await t.rollback();
+      return res.status(400).json({
+        success: false,
+        message: `${seatClass} class is not available for this trip`,
+      });
+    }
+
     const totalPrice = pricePerSeat * numberOfSeats;
 
     // Generate booking reference
     const bookingReference = generateBookingReference();
 
-    // Create reservation with pending payment
-    const reservation = await Reservation.create(
+    // Create Booking with pending payment
+    const booking = await Booking.create(
       {
         user_id: req.user.id,
         trip_id: tourId,
+        trip_departure_id: departure.trip_departure_id,
         seat_class: seatClass,
         seat_number: null, // Will assign after payment
         number_of_seats: numberOfSeats,
@@ -144,31 +197,30 @@ exports.createReservation = async (req, res) => {
       { transaction: t }
     );
 
-    // Temporarily reduce available seats
-    if (seatClass === 'first') {
-      await trip.update(
-        { available_first_class_seats: trip.available_first_class_seats - numberOfSeats },
-        { transaction: t }
-      );
-    } else {
-      await trip.update(
-        { available_second_class_seats: trip.available_second_class_seats - numberOfSeats },
-        { transaction: t }
-      );
-    }
+    // Reduce available seats for this specific departure
+    await departure.update(
+      { available_seats: departure.available_seats - numberOfSeats },
+      { transaction: t }
+    );
 
     await t.commit();
 
-    // Fetch complete reservation
-    const completeReservation = await Reservation.findByPk(reservation.id, {
+    // Fetch complete Booking
+    const completeReservation = await Booking.findByPk(booking.id, {
       include: [
         {
-          model: Trip,
-          as: 'trip',
+          model: TripDeparture,
+          as: 'tripDeparture',
           include: [
-            { model: Train, as: 'train' },
-            { model: Station, as: 'departureStation' },
-            { model: Station, as: 'arrivalStation' },
+            {
+              model: Trip,
+              as: 'trip',
+              include: [
+                { model: Train, as: 'train' },
+                { model: Station, as: 'departureStation' },
+                { model: Station, as: 'arrivalStation' },
+              ],
+            },
           ],
         },
       ],
@@ -179,12 +231,11 @@ exports.createReservation = async (req, res) => {
       const user = await User.findByPk(req.user.id);
       await emailService.sendBookingConfirmation(user.email, user.full_name, {
         reference: completeReservation.booking_reference,
-        trainName: completeReservation.trip.train.name,
-        trainNumber: completeReservation.trip.train.train_number,
-        from: completeReservation.trip.departureStation.name,
-        to: completeReservation.trip.arrivalStation.name,
-        departureTime: new Date(completeReservation.trip.departure_time).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }),
-        arrivalTime: new Date(completeReservation.trip.arrival_time).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }),
+        trainNumber: completeReservation.tripDeparture.trip.train.train_number,
+        from: completeReservation.tripDeparture.trip.departureStation.name,
+        to: completeReservation.tripDeparture.trip.arrivalStation.name,
+        departureTime: new Date(completeReservation.tripDeparture.departure_time).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }),
+        arrivalTime: new Date(completeReservation.tripDeparture.arrival_time).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }),
         seatClass: completeReservation.seat_class,
         seats: completeReservation.number_of_seats,
         totalPrice: parseFloat(completeReservation.total_price),
@@ -195,7 +246,7 @@ exports.createReservation = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Reservation created. Please proceed to payment.',
+      message: 'Booking created. Please proceed to payment.',
       data: {
         reservation: {
           id: completeReservation.id,
@@ -204,21 +255,23 @@ exports.createReservation = async (req, res) => {
           totalPrice: parseFloat(completeReservation.total_price),
           bookingReference: completeReservation.booking_reference,
           status: completeReservation.status,
-          trip: {
-            id: completeReservation.trip.id,
-            departureTime: completeReservation.trip.departure_time,
-            arrivalTime: completeReservation.trip.arrival_time,
-            train: {
-              trainNumber: completeReservation.trip.train.train_number,
-              name: completeReservation.trip.train.name,
-            },
-            departureStation: {
-              name: completeReservation.trip.departureStation.name,
-              city: completeReservation.trip.departureStation.city,
-            },
-            arrivalStation: {
-              name: completeReservation.trip.arrivalStation.name,
-              city: completeReservation.trip.arrivalStation.city,
+          tripDeparture: {
+            id: completeReservation.tripDeparture.trip_departure_id,
+            departureTime: completeReservation.tripDeparture.departure_time,
+            arrivalTime: completeReservation.tripDeparture.arrival_time,
+            trip: {
+              id: completeReservation.tripDeparture.trip.id,
+              train: {
+                trainNumber: completeReservation.tripDeparture.trip.train.train_number,
+              },
+              departureStation: {
+                name: completeReservation.tripDeparture.trip.departureStation.name,
+                city: completeReservation.tripDeparture.trip.departureStation.city,
+              },
+              arrivalStation: {
+                name: completeReservation.tripDeparture.trip.arrivalStation.name,
+                city: completeReservation.tripDeparture.trip.arrivalStation.city,
+              },
             },
           },
         },
@@ -226,10 +279,10 @@ exports.createReservation = async (req, res) => {
     });
   } catch (error) {
     await t.rollback();
-    console.error('Create reservation error:', error);
+    console.error('Create Booking error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to create reservation',
+      message: 'Failed to create Booking',
     });
   }
 };
@@ -253,8 +306,8 @@ exports.processPayment = async (req, res) => {
       });
     }
 
-    // Get reservation
-    const reservation = await Reservation.findOne({
+    // Get Booking
+    const Booking = await Booking.findOne({
       where: {
         id,
         user_id: req.user.id,
@@ -264,19 +317,19 @@ exports.processPayment = async (req, res) => {
       lock: t.LOCK.UPDATE,
     });
 
-    if (!reservation) {
+    if (!Booking) {
       await t.rollback();
       return res.status(404).json({
         success: false,
-        message: 'Reservation not found',
+        message: 'Booking not found',
       });
     }
 
-    if (reservation.status === 'confirmed') {
+    if (Booking.status === 'confirmed') {
       await t.rollback();
       return res.status(400).json({
         success: false,
-        message: 'Payment already completed for this reservation',
+        message: 'Payment already completed for this Booking',
       });
     }
 
@@ -309,20 +362,20 @@ exports.processPayment = async (req, res) => {
 
       // Simulate payment processing
       console.log('Processing credit card payment:', {
-        amount: reservation.price,
+        amount: Booking.price,
         cardNumber: cardNumber.slice(-4),
         cardHolder: cardHolder,
       });
     } else {
       // Cash payment - will be paid at station
-      console.log('Cash payment registered for reservation:', reservation.booking_reference);
+      console.log('Cash payment registered for Booking:', Booking.booking_reference);
     }
 
     // Generate seat number (simple implementation)
-    const seatNumber = `${reservation.seat_class === 'first' ? 'F' : 'S'}${Math.floor(Math.random() * 100) + 1}`;
+    const seatNumber = `${Booking.seat_class === 'first' ? 'F' : 'S'}${Math.floor(Math.random() * 100) + 1}`;
 
-    // Update reservation
-    await reservation.update(
+    // Update Booking
+    await Booking.update(
       {
         status: 'confirmed',
         seat_number: seatNumber,
@@ -333,8 +386,8 @@ exports.processPayment = async (req, res) => {
 
     await t.commit();
 
-    // Fetch updated reservation
-    const updatedReservation = await Reservation.findByPk(id, {
+    // Fetch updated Booking
+    const updatedReservation = await Booking.findByPk(id, {
       include: [
         {
           model: Trip,
@@ -354,7 +407,7 @@ exports.processPayment = async (req, res) => {
         ? 'Payment processed successfully' 
         : 'Booking confirmed. Please pay at the station before departure.',
       data: {
-        reservation: {
+        Booking: {
           id: updatedReservation.id,
           seatClass: updatedReservation.seat_class,
           seatNumber: updatedReservation.seat_number,
@@ -369,7 +422,7 @@ exports.processPayment = async (req, res) => {
             arrivalTime: updatedReservation.trip.arrival_time,
             train: {
               trainNumber: updatedReservation.trip.train.train_number,
-              name: updatedReservation.trip.train.name,
+              
             },
             departureStation: {
               name: updatedReservation.trip.departureStation.name,
@@ -393,7 +446,7 @@ exports.processPayment = async (req, res) => {
   }
 };
 
-// @desc    Cancel reservation
+// @desc    Cancel Booking
 // @route   DELETE /api/user/reservations/:id
 // @access  Private
 exports.cancelReservation = async (req, res) => {
@@ -402,7 +455,7 @@ exports.cancelReservation = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const reservation = await Reservation.findOne({
+    const Booking = await Booking.findOne({
       where: {
         id,
         user_id: req.user.id,
@@ -412,24 +465,24 @@ exports.cancelReservation = async (req, res) => {
       lock: t.LOCK.UPDATE,
     });
 
-    if (!reservation) {
+    if (!Booking) {
       await t.rollback();
       return res.status(404).json({
         success: false,
-        message: 'Reservation not found',
+        message: 'Booking not found',
       });
     }
 
-    if (reservation.status === 'cancelled') {
+    if (Booking.status === 'cancelled') {
       await t.rollback();
       return res.status(400).json({
         success: false,
-        message: 'Reservation already cancelled',
+        message: 'Booking already cancelled',
       });
     }
 
-    // Update reservation status
-    await reservation.update(
+    // Update Booking status
+    await Booking.update(
       {
         status: 'cancelled',
         updated_at: new Date(),
@@ -438,9 +491,9 @@ exports.cancelReservation = async (req, res) => {
     );
 
     // Restore seat availability
-    const trip = reservation.trip;
-    const seatsToRestore = reservation.number_of_seats || 1;
-    if (reservation.seat_class === 'first') {
+    const trip = Booking.trip;
+    const seatsToRestore = Booking.number_of_seats || 1;
+    if (Booking.seat_class === 'first') {
       await trip.update(
         { available_first_class_seats: trip.available_first_class_seats + seatsToRestore },
         { transaction: t }
@@ -455,22 +508,22 @@ exports.cancelReservation = async (req, res) => {
     await t.commit();
 
     // Calculate refund (100% refund if cancelled)
-    const refundAmount = parseFloat(reservation.total_price);
+    const refundAmount = parseFloat(Booking.total_price);
 
     res.json({
       success: true,
-      message: `Reservation cancelled successfully. Refund of $${refundAmount.toFixed(2)} will be processed within 5-7 business days.`,
+      message: `Booking cancelled successfully. Refund of $${refundAmount.toFixed(2)} will be processed within 5-7 business days.`,
       data: {
         refundAmount: refundAmount,
-        bookingReference: reservation.booking_reference,
+        bookingReference: Booking.booking_reference,
       },
     });
   } catch (error) {
     await t.rollback();
-    console.error('Cancel reservation error:', error);
+    console.error('Cancel Booking error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to cancel reservation',
+      message: 'Failed to cancel Booking',
     });
   }
 };

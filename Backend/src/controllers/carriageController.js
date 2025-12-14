@@ -1,5 +1,32 @@
-const { Carriage } = require('../models');
+const { Carriage, CarriageType } = require('../models');
 const { Op } = require('sequelize');
+
+// @desc    Get all carriage types
+// @route   GET /api/admin/carriage-types
+// @access  Private/Admin
+exports.getAllCarriageTypes = async (req, res) => {
+  try {
+    const types = await CarriageType.findAll({
+      order: [['carriage_type_id', 'ASC']],
+    });
+
+    res.json({
+      success: true,
+      data: types.map(type => ({
+        id: type.carriage_type_id,
+        type: type.type,
+        capacity: type.capacity,
+        price: parseFloat(type.price),
+      })),
+    });
+  } catch (error) {
+    console.error('Get carriage types error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching carriage types',
+    });
+  }
+};
 
 // @desc    Get all carriages
 // @route   GET /api/admin/carriages
@@ -7,9 +34,13 @@ const { Op } = require('sequelize');
 exports.getAllCarriages = async (req, res) => {
   try {
     const carriages = await Carriage.findAll({
+      include: [{
+        model: CarriageType,
+        as: 'carriageType',
+        required: false,
+      }],
       order: [
-        ['class_type', 'ASC'],
-        ['name', 'ASC'],
+        ['carriage_number', 'ASC'],
       ],
     });
 
@@ -17,11 +48,14 @@ exports.getAllCarriages = async (req, res) => {
       success: true,
       data: carriages.map(carriage => ({
         id: carriage.id,
-        name: carriage.name,
-        classType: carriage.class_type,
-        seatsCount: carriage.seats_count,
-        model: carriage.model,
-        description: carriage.description,
+        carriageNumber: carriage.carriage_number,
+        carriageTypeId: carriage.carriage_type_id,
+        carriageType: carriage.carriageType ? {
+          id: carriage.carriageType.carriage_type_id,
+          type: carriage.carriageType.type,
+          capacity: carriage.carriageType.capacity,
+          price: parseFloat(carriage.carriageType.price),
+        } : null,
         createdAt: carriage.created_at,
         updatedAt: carriage.updated_at,
       })),
@@ -45,8 +79,8 @@ exports.createCarriage = async (req, res) => {
     const name = req.body.name;
     const class_type = req.body.class_type || req.body.classType;
     const seats_count = req.body.seats_count || req.body.seatsCount;
-    const model = req.body.model;
-    const description = req.body.description;
+    
+    
 
     // Validation
     if (!name || !class_type || !seats_count) {
@@ -99,8 +133,8 @@ exports.createCarriage = async (req, res) => {
           name: carriage.name,
           classType: carriage.class_type,
           seatsCount: carriage.seats_count,
-          model: carriage.model,
-          description: carriage.description,
+
+
         },
       },
     });
@@ -123,8 +157,8 @@ exports.updateCarriage = async (req, res) => {
     const name = req.body.name;
     const class_type = req.body.class_type || req.body.classType;
     const seats_count = req.body.seats_count || req.body.seatsCount;
-    const model = req.body.model;
-    const description = req.body.description;
+    
+    
 
     const carriage = await Carriage.findByPk(id);
     if (!carriage) {
@@ -160,8 +194,8 @@ exports.updateCarriage = async (req, res) => {
       name: name || carriage.name,
       class_type: class_type || carriage.class_type,
       seats_count: seats_count !== undefined ? seats_count : carriage.seats_count,
-      model: model !== undefined ? model : carriage.model,
-      description: description !== undefined ? description : carriage.description,
+      
+      
       updated_at: new Date(),
     });
 
@@ -174,8 +208,8 @@ exports.updateCarriage = async (req, res) => {
           name: carriage.name,
           classType: carriage.class_type,
           seatsCount: carriage.seats_count,
-          model: carriage.model,
-          description: carriage.description,
+
+
         },
       },
     });

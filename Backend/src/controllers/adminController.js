@@ -1,4 +1,4 @@
-const { User, Station, Train, Trip, Reservation, sequelize } = require('../models');
+const { User, Station, Train, Trip, TripDeparture, Booking, CarriageType, sequelize } = require('../models');
 
 // @desc    Get dashboard statistics
 // @route   GET /api/admin/stats
@@ -18,16 +18,16 @@ exports.getDashboardStats = async (req, res) => {
       Station.count(),
       Train.count(),
       Trip.count(),
-      Reservation.count(),
+      Booking.count(),
       Trip.count({ where: { status: 'scheduled' } }),
-      Reservation.count({ where: { status: 'pending' } }),
+      Booking.count({ where: { status: 'pending' } }),
     ]);
 
     // Get recent reservations count (last 7 days)
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     
-    const recentReservations = await Reservation.count({
+    const recentReservations = await Booking.count({
       where: {
         created_at: {
           [sequelize.Sequelize.Op.gte]: sevenDaysAgo,
@@ -90,12 +90,12 @@ exports.getAllUsers = async (req, res) => {
   }
 };
 
-// @desc    Get all reservations (admin)
+// @desc    Get all bookings (admin)
 // @route   GET /api/admin/reservations
 // @access  Private/Admin
 exports.getAllReservations = async (req, res) => {
   try {
-    const reservations = await Reservation.findAll({
+    const bookings = await Booking.findAll({
       include: [
         {
           model: User,
@@ -103,13 +103,24 @@ exports.getAllReservations = async (req, res) => {
           attributes: ['id', 'full_name', 'email'],
         },
         {
-          model: Trip,
-          as: 'trip',
+          model: TripDeparture,
+          as: 'tripDeparture',
           include: [
-            { model: Train, as: 'train', attributes: ['train_number', 'name'] },
-            { model: Station, as: 'departureStation', attributes: ['name', 'city'] },
-            { model: Station, as: 'arrivalStation', attributes: ['name', 'city'] },
+            {
+              model: Trip,
+              as: 'trip',
+              include: [
+                { model: Train, as: 'train', attributes: ['train_number', 'type'] },
+                { model: Station, as: 'departureStation', attributes: ['name', 'city'] },
+                { model: Station, as: 'arrivalStation', attributes: ['name', 'city'] },
+              ],
+            },
           ],
+        },
+        {
+          model: CarriageType,
+          as: 'carriageType',
+          attributes: ['type', 'price'],
         },
       ],
       order: [['created_at', 'DESC']],
@@ -117,39 +128,44 @@ exports.getAllReservations = async (req, res) => {
 
     res.json({
       success: true,
-      data: reservations.map(r => ({
-        id: r.id,
-        bookingReference: r.booking_reference,
-        passengerName: r.passenger_name,
-        passengerNationalId: r.passenger_national_id,
-        seatClass: r.seat_class,
-        seatNumber: r.seat_number,
-        price: parseFloat(r.price),
-        paymentStatus: r.payment_status,
-        status: r.status,
-        user: {
-          id: r.user.id,
-          fullName: r.user.full_name,
-          email: r.user.email,
-        },
-        trip: {
-          id: r.trip.id,
-          departureTime: r.trip.departure_time,
-          arrivalTime: r.trip.arrival_time,
-          train: {
-            trainNumber: r.trip.train.train_number,
-            name: r.trip.train.name,
-          },
-          departureStation: {
-            name: r.trip.departureStation.name,
-            city: r.trip.departureStation.city,
-          },
-          arrivalStation: {
-            name: r.trip.arrivalStation.name,
-            city: r.trip.arrivalStation.city,
-          },
-        },
-        createdAt: r.created_at,
+      data: bookings.map(b => ({
+        id: b.id,
+        bookingReference: b.booking_reference,
+        passengerName: b.passenger_name,
+        passengerNationalId: b.passenger_national_id,
+        seatNumber: b.seat_number,
+        price: parseFloat(b.price),
+        status: b.status,
+        user: b.user ? {
+          id: b.user.id,
+          fullName: b.user.full_name,
+          email: b.user.email,
+        } : null,
+        tripDeparture: b.tripDeparture ? {
+          id: b.tripDeparture.id,
+          departureTime: b.tripDeparture.departure_time,
+          arrivalTime: b.tripDeparture.arrival_time,
+          trip: b.tripDeparture.trip ? {
+            id: b.tripDeparture.trip.id,
+            train: b.tripDeparture.trip.train ? {
+              trainNumber: b.tripDeparture.trip.train.train_number,
+              type: b.tripDeparture.trip.train.type,
+            } : null,
+            departureStation: b.tripDeparture.trip.departureStation ? {
+              name: b.tripDeparture.trip.departureStation.name,
+              city: b.tripDeparture.trip.departureStation.city,
+            } : null,
+            arrivalStation: b.tripDeparture.trip.arrivalStation ? {
+              name: b.tripDeparture.trip.arrivalStation.name,
+              city: b.tripDeparture.trip.arrivalStation.city,
+            } : null,
+          } : null,
+        } : null,
+        carriageType: b.carriageType ? {
+          type: b.carriageType.type,
+          price: parseFloat(b.carriageType.price),
+        } : null,
+        createdAt: b.created_at,
       })),
     });
   } catch (error) {

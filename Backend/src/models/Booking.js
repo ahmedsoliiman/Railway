@@ -1,11 +1,12 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/sequelize');
 
-const Reservation = sequelize.define('Reservation', {
+const Booking = sequelize.define('Booking', {
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true,
+    field: 'booking_id', // Map to booking_id in database
   },
   user_id: {
     type: DataTypes.INTEGER,
@@ -16,18 +17,23 @@ const Reservation = sequelize.define('Reservation', {
     },
     onDelete: 'CASCADE',
   },
-  trip_id: {
+  trip_departure_id: {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: 'trips',
-      key: 'id',
+      model: 'trip_departures',
+      key: 'trip_departure_id',
     },
     onDelete: 'CASCADE',
   },
-  seat_class: {
-    type: DataTypes.STRING(20),
+  carriage_type_id: {
+    type: DataTypes.INTEGER,
     allowNull: false,
+    references: {
+      model: 'carriage_types',
+      key: 'carriage_type_id',
+    },
+    onDelete: 'RESTRICT',
   },
   seat_number: {
     type: DataTypes.STRING(10),
@@ -47,8 +53,9 @@ const Reservation = sequelize.define('Reservation', {
     unique: true,
   },
   status: {
-    type: DataTypes.STRING(20),
+    type: DataTypes.ENUM('pending', 'confirmed', 'cancelled'),
     defaultValue: 'pending',
+    allowNull: false,
   },
   created_at: {
     type: DataTypes.DATE,
@@ -59,9 +66,9 @@ const Reservation = sequelize.define('Reservation', {
     defaultValue: DataTypes.NOW,
   },
 }, {
-  tableName: 'reservations',
+  tableName: 'bookings',
   timestamps: false,
   underscored: true,
 });
 
-module.exports = Reservation;
+module.exports = Booking;

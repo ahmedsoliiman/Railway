@@ -203,8 +203,15 @@ router.get('/stations', async (req, res) => {
   }
 });
 
+// ============================================
+// DEPRECATED ROUTES - USE /api/user/reservations INSTEAD
+// These old routes use raw SQL with outdated table structure
+// The proper routes are in booking.js using Sequelize models
+// ============================================
+
+/*
 // @route   POST /api/reservations
-// @desc    Book a tour
+// @desc    Book a tour  
 // @access  Private
 router.post(
   '/reservations',
@@ -489,5 +496,6 @@ router.delete('/reservations/:id', async (req, res) => {
     client.release();
   }
 });
+*/
 
 module.exports = router;

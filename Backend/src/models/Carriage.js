@@ -7,28 +7,20 @@ const Carriage = sequelize.define('Carriage', {
     primaryKey: true,
     autoIncrement: true,
   },
-  name: {
-    type: DataTypes.STRING(100),
+  carriage_number: { 
+    type: DataTypes.STRING(50),
     allowNull: false,
+    unique: true,
   },
-  class_type: {
-    type: DataTypes.ENUM('first', 'second', 'economic'),
-    allowNull: false,
-  },
-  seats_count: {
+  carriage_type_id: {
     type: DataTypes.INTEGER,
     allowNull: false,
-    validate: {
-      min: 1,
+    references: {
+      model: 'carriage_types',
+      key: 'carriage_type_id',
     },
-  },
-  model: {
-    type: DataTypes.STRING(100),
-    allowNull: true,
-  },
-  description: {
-    type: DataTypes.TEXT,
-    allowNull: true,
+    onUpdate: 'CASCADE',
+    onDelete: 'RESTRICT',
   },
   created_at: {
     type: DataTypes.DATE,

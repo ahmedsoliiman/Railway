@@ -1,0 +1,11 @@
+-- Drop all tables in correct order to avoid foreign key conflicts
+DROP TABLE IF EXISTS payments CASCADE;
+DROP TABLE IF EXISTS bookings CASCADE;
+DROP TABLE IF EXISTS trip_departures CASCADE;
+DROP TABLE IF EXISTS trips CASCADE;
+DROP TABLE IF EXISTS train_carriages CASCADE;
+DROP TABLE IF EXISTS trains CASCADE;
+DROP TABLE IF EXISTS carriages CASCADE;
+DROP TABLE IF EXISTS carriage_types CASCADE;
+DROP TABLE IF EXISTS stations CASCADE;
+DROP TABLE IF EXISTS users CASCADE;

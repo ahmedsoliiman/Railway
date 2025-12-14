@@ -7,6 +7,7 @@ const stationController = require('../controllers/stationController');
 const carriageController = require('../controllers/carriageController');
 const trainController = require('../controllers/trainController');
 const tripController = require('../controllers/tripController');
+const tripDepartureController = require('../controllers/tripDepartureController');
 const adminController = require('../controllers/adminController');
 
 // Apply auth and admin middleware to all routes
@@ -72,6 +73,11 @@ router.put(
 router.delete('/stations/:id', stationController.deleteStation);
 
 // ============ CARRIAGES MANAGEMENT ============
+
+// @route   GET /api/admin/carriage-types
+// @desc    Get all carriage types
+// @access  Admin
+router.get('/carriage-types', carriageController.getAllCarriageTypes);
 
 // @route   GET /api/admin/carriages
 // @desc    Get all carriages
@@ -1053,5 +1059,44 @@ router.get('/dashboard-stats', async (req, res) => {
     });
   }
 });
+
+// ============ TRIP DEPARTURES MANAGEMENT ============
+
+// @route   GET /api/admin/trip-departures
+// @desc    Get all trip departures
+// @access  Admin
+router.get('/trip-departures', tripDepartureController.getAllTripDepartures);
+
+// @route   GET /api/admin/trips/:tripId/departures
+// @desc    Get trip departures for a specific trip
+// @access  Admin
+router.get('/trips/:tripId/departures', tripDepartureController.getTripDepartures);
+
+// @route   POST /api/admin/trip-departures
+// @desc    Create trip departure
+// @access  Admin
+router.post('/trip-departures', [
+  body('departure_time').optional().notEmpty().withMessage('Departure time is required when provided'),
+  body('departureTime').optional().notEmpty().withMessage('Departure time is required when provided'),
+  body('arrival_time').optional().notEmpty().withMessage('Arrival time is required when provided'),
+  body('arrivalTime').optional().notEmpty().withMessage('Arrival time is required when provided'),
+  validate,
+], tripDepartureController.createTripDeparture);
+
+// @route   PUT /api/admin/trip-departures/:id
+// @desc    Update trip departure
+// @access  Admin
+router.put('/trip-departures/:id', [
+  body('departure_time').optional().notEmpty().withMessage('Departure time is required when provided'),
+  body('departureTime').optional().notEmpty().withMessage('Departure time is required when provided'),
+  body('arrival_time').optional().notEmpty().withMessage('Arrival time is required when provided'),
+  body('arrivalTime').optional().notEmpty().withMessage('Arrival time is required when provided'),
+  validate,
+], tripDepartureController.updateTripDeparture);
+
+// @route   DELETE /api/admin/trip-departures/:id
+// @desc    Delete trip departure
+// @access  Admin
+router.delete('/trip-departures/:id', tripDepartureController.deleteTripDeparture);
 
 module.exports = router;

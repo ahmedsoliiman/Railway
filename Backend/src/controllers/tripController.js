@@ -1,4 +1,4 @@
-const { Trip, Train, Station, sequelize } = require('../models');
+const { Trip, Train, Station, TripDeparture, sequelize } = require('../models');
 const { Op } = require('sequelize');
 
 // @desc    Get all trips (with filters)
@@ -8,50 +8,49 @@ exports.getAllTrips = async (req, res) => {
   try {
     const { from_station, to_station, date, seat_class, originId, destinationId } = req.query;
 
-    const where = {};
+    const tripWhere = {};
 
     // Filter by stations - accept both naming conventions
     const fromStation = from_station || originId;
     const toStation = to_station || destinationId;
     
     if (fromStation) {
-      where.origin_station_id = parseInt(fromStation);
+      tripWhere.origin_station_id = parseInt(fromStation);
       console.log('🔍 Filtering by origin station:', fromStation);
     }
     if (toStation) {
-      where.destination_station_id = parseInt(toStation);
+      tripWhere.destination_station_id = parseInt(toStation);
       console.log('🔍 Filtering by destination station:', toStation);
     }
 
-    // Filter by date and future departure
+    // Build departure filter for TripDepartures
+    const departureWhere = {};
     if (date) {
       const startDate = new Date(date);
       startDate.setHours(0, 0, 0, 0);
       const endDate = new Date(date);
       endDate.setHours(23, 59, 59, 999);
 
-      where.departure_time = {
-        [Op.and]: [
-          { [Op.gte]: startDate },
-          { [Op.lte]: endDate },
-          { [Op.gt]: new Date() }
-        ]
+      departureWhere.departure_time = {
+        [Op.between]: [startDate, endDate]
       };
+      // Also ensure future departures
+      departureWhere.departure_time[Op.gt] = new Date();
       console.log('🔍 Filtering by date:', date);
     } else {
-      // No specific date, just show future trips
-      where.departure_time = {
+      // No specific date, just show future departures
+      departureWhere.departure_time = {
         [Op.gt]: new Date(),
       };
     }
 
     const trips = await Trip.findAll({
-      where,
+      where: tripWhere,
       include: [
         {
           model: Train,
           as: 'train',
-          attributes: ['id', 'train_number', 'name', 'type', 'facilities'],
+          attributes: ['id', 'train_number', 'type'],
         },
         {
           model: Station,
@@ -63,33 +62,40 @@ exports.getAllTrips = async (req, res) => {
           as: 'arrivalStation',
           attributes: ['id', 'name', 'code', 'city'],
         },
+        {
+          model: TripDeparture,
+          as: 'departures',
+          where: departureWhere,
+          required: true, // Only include trips that have future departures
+          attributes: ['trip_departure_id', 'departure_time', 'arrival_time', 'available_seats'],
+        },
       ],
-      order: [['departure_time', 'ASC']],
+      order: [
+        [{ model: TripDeparture, as: 'departures' }, 'departure_time', 'ASC']
+      ],
     });
 
-    // Filter by seat availability if seat_class specified
+    // Filter by seat class availability if specified
     let filteredTrips = trips;
     if (seat_class === 'first') {
-      filteredTrips = trips.filter(t => t.first_class_price && t.quantities > 0);
+      filteredTrips = trips.filter(t => t.first_class_price && t.first_class_price > 0);
     } else if (seat_class === 'second') {
-      filteredTrips = trips.filter(t => t.second_class_price && t.quantities > 0);
+      filteredTrips = trips.filter(t => t.second_class_price && t.second_class_price > 0);
     }
 
     res.json({
       success: true,
       data: filteredTrips.map(trip => ({
         id: trip.id,
-        departureTime: trip.departure_time,
-        arrivalTime: trip.arrival_time,
-        firstClassPrice: parseFloat(trip.first_class_price),
-        secondClassPrice: parseFloat(trip.second_class_price),
+        trainId: trip.train_id,
+        firstClassPrice: trip.first_class_price ? parseFloat(trip.first_class_price) : null,
+        secondClassPrice: trip.second_class_price ? parseFloat(trip.second_class_price) : null,
+        economicPrice: trip.economic_price ? parseFloat(trip.economic_price) : null,
         quantities: trip.quantities,
         train: {
           id: trip.train.id,
           trainNumber: trip.train.train_number,
-          name: trip.train.name,
           type: trip.train.type,
-          facilities: trip.train.facilities,
         },
         departureStation: {
           id: trip.departureStation.id,
@@ -103,6 +109,12 @@ exports.getAllTrips = async (req, res) => {
           code: trip.arrivalStation.code,
           city: trip.arrivalStation.city,
         },
+        departures: trip.departures.map(dep => ({
+          id: dep.trip_departure_id,
+          departureTime: dep.departure_time,
+          arrivalTime: dep.arrival_time,
+          availableSeats: dep.available_seats,
+        })),
       })),
     });
   } catch (error) {
@@ -135,6 +147,15 @@ exports.getTripById = async (req, res) => {
           model: Station,
           as: 'arrivalStation',
         },
+        {
+          model: TripDeparture,
+          as: 'departures',
+          where: {
+            departure_time: { [Op.gt]: new Date() }
+          },
+          required: false,
+          attributes: ['trip_departure_id', 'departure_time', 'arrival_time', 'available_seats'],
+        },
       ],
     });
 
@@ -149,18 +170,15 @@ exports.getTripById = async (req, res) => {
       success: true,
       data: {
         id: trip.id,
-        departureTime: trip.departure_time,
-        arrivalTime: trip.arrival_time,
-        firstClassPrice: parseFloat(trip.first_class_price || 0),
-        secondClassPrice: parseFloat(trip.second_class_price || 0),
-        quantities: trip.quantities, // Available seats
-        availableSeats: trip.quantities, // For compatibility
+        trainId: trip.train_id,
+        firstClassPrice: trip.first_class_price ? parseFloat(trip.first_class_price) : null,
+        secondClassPrice: trip.second_class_price ? parseFloat(trip.second_class_price) : null,
+        economicPrice: trip.economic_price ? parseFloat(trip.economic_price) : null,
+        quantities: trip.quantities,
         train: {
           id: trip.train.id,
           trainNumber: trip.train.train_number,
-          name: trip.train.name,
           type: trip.train.type,
-          facilities: trip.train.facilities,
         },
         departureStation: {
           id: trip.departureStation.id,
@@ -176,6 +194,12 @@ exports.getTripById = async (req, res) => {
           city: trip.arrivalStation.city,
           address: trip.arrivalStation.address,
         },
+        departures: trip.departures ? trip.departures.map(dep => ({
+          id: dep.trip_departure_id,
+          departureTime: dep.departure_time,
+          arrivalTime: dep.arrival_time,
+          availableSeats: dep.available_seats,
+        })) : [],
       },
     });
   } catch (error) {
@@ -199,8 +223,13 @@ exports.getAllTripsAdmin = async (req, res) => {
         { model: Train, as: 'train' },
         { model: Station, as: 'departureStation' },
         { model: Station, as: 'arrivalStation' },
+        { 
+          model: TripDeparture, 
+          as: 'departures',
+          required: false, // LEFT JOIN so trips without departures still show
+        }
       ],
-      order: [['departure_time', 'DESC']],
+      order: [['id', 'DESC']],
     });
 
     res.json({
@@ -210,16 +239,12 @@ exports.getAllTripsAdmin = async (req, res) => {
         trainId: trip.train_id,
         originStationId: trip.origin_station_id,
         destinationStationId: trip.destination_station_id,
-        departure: trip.departure,
-        departureTime: trip.departure_time,
-        arrivalTime: trip.arrival_time,
-        firstClassPrice: parseFloat(trip.first_class_price),
-        secondClassPrice: parseFloat(trip.second_class_price),
-        economicPrice: trip.economic_price ? parseFloat(trip.economic_price) : null,
+        firstClassPrice: parseFloat(trip.first_class_price || 0),
+        secondClassPrice: parseFloat(trip.second_class_price || 0),
+        economicPrice: parseFloat(trip.economic_price || 0),
         quantities: trip.quantities,
         train: {
           trainNumber: trip.train.train_number,
-          name: trip.train.name,
           type: trip.train.type,
         },
         departureStation: {
@@ -230,6 +255,12 @@ exports.getAllTripsAdmin = async (req, res) => {
           name: trip.arrivalStation.name,
           city: trip.arrivalStation.city,
         },
+        departures: trip.departures.map(dep => ({
+          id: dep.trip_departure_id,
+          departureTime: dep.departure_time,
+          arrivalTime: dep.arrival_time,
+          availableSeats: dep.available_seats,
+        })),
         createdAt: trip.created_at,
       })),
     });
@@ -251,19 +282,16 @@ exports.createTrip = async (req, res) => {
     const train_id = req.body.train_id || req.body.trainId;
     const origin_station_id = req.body.origin_station_id || req.body.originStationId;
     const destination_station_id = req.body.destination_station_id || req.body.destinationStationId;
-    const departure = req.body.departure;
-    const departure_time = req.body.departure_time || req.body.departureTime;
-    const arrival_time = req.body.arrival_time || req.body.arrivalTime;
-    const first_class_price = req.body.first_class_price || req.body.firstClassPrice;
-    const second_class_price = req.body.second_class_price || req.body.secondClassPrice;
-    const economic_price = req.body.economic_price || req.body.economicPrice;
+    const first_class_price = req.body.first_class_price || req.body.firstClassPrice || 0;
+    const second_class_price = req.body.second_class_price || req.body.secondClassPrice || 0;
+    const economic_price = req.body.economic_price || req.body.economicPrice || 0;
     const quantities = req.body.quantities;
 
     // Validation
-    if (!train_id || !origin_station_id || !destination_station_id || !departure || !departure_time || !arrival_time || !first_class_price || !second_class_price || !economic_price || !quantities) {
+    if (!train_id || !origin_station_id || !destination_station_id || !quantities) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide all required fields',
+        message: 'Please provide all required fields (trainId, originStationId, destinationStationId, quantities)',
       });
     }
 
@@ -293,14 +321,11 @@ exports.createTrip = async (req, res) => {
       });
     }
 
-    // Create trip
+    // Create trip with prices
     const trip = await Trip.create({
       train_id,
       origin_station_id,
       destination_station_id,
-      departure,
-      departure_time,
-      arrival_time,
       first_class_price,
       second_class_price,
       economic_price,
@@ -316,12 +341,9 @@ exports.createTrip = async (req, res) => {
           trainId: trip.train_id,
           originStationId: trip.origin_station_id,
           destinationStationId: trip.destination_station_id,
-          departure: trip.departure,
-          departureTime: trip.departure_time,
-          arrivalTime: trip.arrival_time,
-          firstClassPrice: parseFloat(trip.first_class_price),
-          secondClassPrice: parseFloat(trip.second_class_price),
-          economicPrice: parseFloat(trip.economic_price),
+          firstClassPrice: parseFloat(trip.first_class_price || 0),
+          secondClassPrice: parseFloat(trip.second_class_price || 0),
+          economicPrice: parseFloat(trip.economic_price || 0),
           quantities: trip.quantities,
         },
       },

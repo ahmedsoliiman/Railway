@@ -2,12 +2,19 @@ const sequelize = require('../config/sequelize');
 const User = require('./User');
 const Station = require('./Station');
 const Carriage = require('./Carriage');
+const CarriageType = require('./CarriageType');
 const Train = require('./Train');
 const TrainCarriage = require('./TrainCarriage');
 const Trip = require('./Trip');
-const Reservation = require('./Reservation');
+const TripDeparture = require('./TripDeparture');
+const Booking = require('./Booking');
+const Payment = require('./Payment');
 
 // ============ ASSOCIATIONS ============
+
+// CarriageType <-> Carriage (One-to-Many)
+CarriageType.hasMany(Carriage, { foreignKey: 'carriage_type_id', as: 'carriages' });
+Carriage.belongsTo(CarriageType, { foreignKey: 'carriage_type_id', as: 'carriageType' });
 
 // Train <-> Carriage (Many-to-Many through TrainCarriage)
 Train.belongsToMany(Carriage, {
@@ -39,13 +46,25 @@ Trip.belongsTo(Station, { foreignKey: 'destination_station_id', as: 'arrivalStat
 Station.hasMany(Trip, { foreignKey: 'origin_station_id', as: 'departingTrips' });
 Station.hasMany(Trip, { foreignKey: 'destination_station_id', as: 'arrivingTrips' });
 
-// Reservation <-> User (Many-to-One)
-Reservation.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
-User.hasMany(Reservation, { foreignKey: 'user_id', as: 'reservations' });
+// Trip <-> TripDeparture (One-to-Many)
+Trip.hasMany(TripDeparture, { foreignKey: 'trip_id', as: 'departures' });
+TripDeparture.belongsTo(Trip, { foreignKey: 'trip_id', as: 'trip' });
 
-// Reservation <-> Trip (Many-to-One)
-Reservation.belongsTo(Trip, { foreignKey: 'trip_id', as: 'trip' });
-Trip.hasMany(Reservation, { foreignKey: 'trip_id', as: 'reservations' });
+// Booking <-> User (Many-to-One)
+Booking.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+User.hasMany(Booking, { foreignKey: 'user_id', as: 'bookings' });
+
+// Booking <-> TripDeparture (Many-to-One)
+Booking.belongsTo(TripDeparture, { foreignKey: 'trip_departure_id', as: 'tripDeparture' });
+TripDeparture.hasMany(Booking, { foreignKey: 'trip_departure_id', as: 'bookings' });
+
+// Booking <-> CarriageType (Many-to-One)
+Booking.belongsTo(CarriageType, { foreignKey: 'carriage_type_id', as: 'carriageType' });
+CarriageType.hasMany(Booking, { foreignKey: 'carriage_type_id', as: 'bookings' });
+
+// Payment <-> Booking (One-to-One)
+Payment.belongsTo(Booking, { foreignKey: 'booking_id', as: 'booking' });
+Booking.hasOne(Payment, { foreignKey: 'booking_id', as: 'payment' });
 
 // ============ EXPORTS ============
 
@@ -54,8 +73,11 @@ module.exports = {
   User,
   Station,
   Carriage,
+  CarriageType,
   Train,
   TrainCarriage,
   Trip,
-  Reservation,
+  TripDeparture,
+  Booking,
+  Payment,
 };

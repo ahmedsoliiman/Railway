@@ -27,12 +27,12 @@ exports.getAllTrains = async (req, res) => {
       data: trains.map(train => ({
         id: train.id,
         trainNumber: train.train_number,
-        name: train.name,
+        trainNumber: train.train_number,
         type: train.type,
         totalSeats: train.total_seats,
         firstClassSeats: train.first_class_seats,
         secondClassSeats: train.second_class_seats,
-        facilities: train.facilities,
+
         status: train.status,
         carriages: train.trainCarriages.map(tc => ({
           carriageId: tc.carriage_id,
@@ -40,7 +40,7 @@ exports.getAllTrains = async (req, res) => {
           name: tc.carriage.name,
           classType: tc.carriage.class_type,
           seatsCount: tc.carriage.seats_count,
-          model: tc.carriage.model,
+
         })),
         createdAt: train.created_at,
         updatedAt: train.updated_at,
@@ -67,7 +67,7 @@ exports.createTrain = async (req, res) => {
     const name = req.body.name;
     const type = req.body.type;
     const carriages = req.body.carriages;
-    const facilities = req.body.facilities;
+    
     const status = req.body.status;
 
     // Validation
@@ -130,7 +130,7 @@ exports.createTrain = async (req, res) => {
         total_seats: totalSeats,
         first_class_seats: firstClassSeats,
         second_class_seats: secondClassSeats,
-        facilities: facilities || null,
+
         status: status || 'active',
       },
       { transaction: t }
@@ -168,12 +168,12 @@ exports.createTrain = async (req, res) => {
         train: {
           id: completeTrain.id,
           trainNumber: completeTrain.train_number,
-          name: completeTrain.name,
+          trainNumber: completeTrain.train_number,
           type: completeTrain.type,
           totalSeats: completeTrain.total_seats,
           firstClassSeats: completeTrain.first_class_seats,
           secondClassSeats: completeTrain.second_class_seats,
-          facilities: completeTrain.facilities,
+
           status: completeTrain.status,
           carriages: completeTrain.trainCarriages.map(tc => ({
             carriageId: tc.carriage_id,
@@ -181,7 +181,7 @@ exports.createTrain = async (req, res) => {
             name: tc.carriage.name,
             classType: tc.carriage.class_type,
             seatsCount: tc.carriage.seats_count,
-            model: tc.carriage.model,
+
           })),
         },
       },
@@ -209,7 +209,7 @@ exports.updateTrain = async (req, res) => {
     const name = req.body.name;
     const type = req.body.type;
     const carriages = req.body.carriages;
-    const facilities = req.body.facilities;
+    
     const status = req.body.status;
 
     const train = await Train.findByPk(id);
@@ -347,7 +347,7 @@ exports.updateTrain = async (req, res) => {
             name: tc.carriage.name,
             classType: tc.carriage.class_type,
             seatsCount: tc.carriage.seats_count,
-            model: tc.carriage.model,
+
           })),
         },
       },

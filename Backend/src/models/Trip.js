@@ -31,27 +31,22 @@ const Trip = sequelize.define('Trip', {
       key: 'id',
     },
   },
-  departure: {
-    type: DataTypes.DATEONLY,
-    allowNull: false,
-  },
-  departure_time: {
-    type: DataTypes.DATE,
-    allowNull: false,
-  },
-  arrival_time: {
-    type: DataTypes.DATE,
-    allowNull: false,
-  },
   first_class_price: {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: true,
+    defaultValue: 0,
   },
   second_class_price: {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: true,
+    defaultValue: 0,
   },
-  quantities: {
+  economic_price: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: true,
+    defaultValue: 0,
+  },
+  quantities: { 
     type: DataTypes.INTEGER,
     allowNull: false,
     defaultValue: 0,

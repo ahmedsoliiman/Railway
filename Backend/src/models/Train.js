@@ -12,11 +12,7 @@ const Train = sequelize.define('Train', {
     allowNull: false,
     unique: true,
   },
-  name: {
-    type: DataTypes.STRING(100),
-    allowNull: false,
-  },
-  type: {
+  type: { 
     type: DataTypes.STRING(50),
     allowNull: false,
     validate: {
@@ -26,24 +22,9 @@ const Train = sequelize.define('Train', {
       }
     }
   },
-  total_seats: {
-    type: DataTypes.INTEGER,
-    defaultValue: 0,
-  },
-  first_class_seats: {
-    type: DataTypes.INTEGER,
-    defaultValue: 0,
-  },
-  second_class_seats: {
-    type: DataTypes.INTEGER,
-    defaultValue: 0,
-  },
-  facilities: {
-    type: DataTypes.TEXT,
-    allowNull: true,
-  },
-  status: {
-    type: DataTypes.STRING(20),
+  status: { 
+    type: DataTypes.STRING(50),
+    allowNull: false,
     defaultValue: 'active',
     validate: {
       isIn: {

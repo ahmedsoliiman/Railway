@@ -18,7 +18,7 @@ exports.getAllStations = async (req, res) => {
         code: station.code,
         city: station.city,
         address: station.address,
-        facilities: station.facilities,
+
         createdAt: station.created_at,
         updatedAt: station.updated_at,
       })),
@@ -37,7 +37,7 @@ exports.getAllStations = async (req, res) => {
 // @access  Private/Admin
 exports.createStation = async (req, res) => {
   try {
-    const { name, code, city, address, facilities } = req.body;
+    const { name, code, city, address } = req.body;
 
     // Validation
     if (!name || !code || !city) {
@@ -66,7 +66,7 @@ exports.createStation = async (req, res) => {
       code,
       city,
       address: address || null,
-      facilities: facilities || null,
+
     });
 
     res.status(201).json({
@@ -79,7 +79,7 @@ exports.createStation = async (req, res) => {
           code: station.code,
           city: station.city,
           address: station.address,
-          facilities: station.facilities,
+
         },
       },
     });
@@ -98,7 +98,7 @@ exports.createStation = async (req, res) => {
 exports.updateStation = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, code, city, address, facilities } = req.body;
+    const { name, code, city, address } = req.body;
 
     const station = await Station.findByPk(id);
     if (!station) {
@@ -133,7 +133,6 @@ exports.updateStation = async (req, res) => {
       code: code || station.code,
       city: city || station.city,
       address: address !== undefined ? address : station.address,
-      facilities: facilities !== undefined ? facilities : station.facilities,
       updated_at: new Date(),
     });
 
@@ -147,7 +146,7 @@ exports.updateStation = async (req, res) => {
           code: station.code,
           city: station.city,
           address: station.address,
-          facilities: station.facilities,
+
         },
       },
     });

@@ -7,12 +7,12 @@ const Station = sequelize.define('Station', {
     primaryKey: true,
     autoIncrement: true,
   },
-  name: {
+  name: { // 
     type: DataTypes.STRING(100),
     allowNull: false,
     unique: true,
   },
-  code: {
+  code: { 
     type: DataTypes.STRING(10),
     allowNull: false,
     unique: true,
@@ -22,10 +22,6 @@ const Station = sequelize.define('Station', {
     allowNull: false,
   },
   address: {
-    type: DataTypes.TEXT,
-    allowNull: true,
-  },
-  facilities: {
     type: DataTypes.TEXT,
     allowNull: true,
   },
