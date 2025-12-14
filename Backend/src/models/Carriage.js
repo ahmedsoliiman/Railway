@@ -22,6 +22,10 @@ const Carriage = sequelize.define('Carriage', {
     onUpdate: 'CASCADE',
     onDelete: 'RESTRICT',
   },
+  model: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+  },
   created_at: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,

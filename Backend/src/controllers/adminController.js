@@ -11,7 +11,6 @@ exports.getDashboardStats = async (req, res) => {
       totalTrains,
       totalTrips,
       totalReservations,
-      activeTrips,
       pendingReservations,
     ] = await Promise.all([
       User.count(),
@@ -19,7 +18,6 @@ exports.getDashboardStats = async (req, res) => {
       Train.count(),
       Trip.count(),
       Booking.count(),
-      Trip.count({ where: { status: 'scheduled' } }),
       Booking.count({ where: { status: 'pending' } }),
     ]);
 
@@ -44,7 +42,6 @@ exports.getDashboardStats = async (req, res) => {
           total_trains: totalTrains,
           total_trips: totalTrips,
           total_reservations: totalReservations,
-          active_trips: activeTrips,
           pending_reservations: pendingReservations,
           recent_reservations: recentReservations,
           total_revenue: 0,

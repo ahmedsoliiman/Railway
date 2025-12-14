@@ -409,14 +409,17 @@ document.getElementById('train-form')?.addEventListener('submit', async (e) => {
 
     const id = document.getElementById('train-id').value;
     const trainData = {
-        train_number: document.getElementById('train-number').value,
-        name: document.getElementById('train-name').value,
+        trainNumber: document.getElementById('train-number').value,
         type: document.getElementById('train-type').value,
-        total_seats: parseInt(document.getElementById('train-total-seats').value),
-        first_class_seats: parseInt(document.getElementById('train-first-class').value),
-        second_class_seats: parseInt(document.getElementById('train-second-class').value),
-        facilities: document.getElementById('train-facilities').value,
-        status: document.getElementById('train-status').value,
+        status: document.getElementById('train-status').value || 'active',
+        carriages: [
+            // For now, send a default carriage structure
+            // TODO: Update this based on actual carriage selection UI
+            {
+                carriageId: 1,
+                quantity: parseInt(document.getElementById('train-total-seats').value) || 1
+            }
+        ]
     };
 
     try {

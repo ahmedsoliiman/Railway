@@ -64,18 +64,21 @@ exports.createTrain = async (req, res) => {
   try {
     // Accept both camelCase (frontend) and snake_case (API)
     const trainNumber = req.body.trainNumber || req.body.train_number;
-    const name = req.body.name;
     const type = req.body.type;
     const carriages = req.body.carriages;
-    
     const status = req.body.status;
 
     // Validation
-    if (!trainNumber || !name || !carriages || carriages.length === 0) {
+    if (!trainNumber || !type || !carriages || carriages.length === 0) {
       await t.rollback();
       return res.status(400).json({
         success: false,
-        message: 'Please provide trainNumber, name, and at least one carriage',
+        message: 'Validation failed',
+        errors: [
+          ...(!trainNumber ? [{field: 'trainNumber', message: 'Train number is required'}] : []),
+          ...(!type ? [{field: 'type', message: 'Train type is required'}] : []),
+          ...(!carriages || carriages.length === 0 ? [{field: 'carriages', message: 'At least one carriage is required'}] : [])
+        ]
       });
     }
 
@@ -125,12 +128,7 @@ exports.createTrain = async (req, res) => {
     const train = await Train.create(
       {
         train_number: trainNumber,
-        name,
         type: type || 'standard',
-        total_seats: totalSeats,
-        first_class_seats: firstClassSeats,
-        second_class_seats: secondClassSeats,
-
         status: status || 'active',
       },
       { transaction: t }
@@ -242,9 +240,7 @@ exports.updateTrain = async (req, res) => {
     await train.update(
       {
         train_number: train_number || train.train_number,
-        name: name || train.name,
         type: type || train.type,
-        facilities: facilities !== undefined ? facilities : train.facilities,
         status: status !== undefined ? status : train.status,
       },
       { transaction: t }

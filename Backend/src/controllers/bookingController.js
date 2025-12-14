@@ -1,4 +1,5 @@
 const { Booking, Trip, Train, Station, User, TripDeparture, sequelize } = require('../models');
+const { Op } = require('sequelize');
 const crypto = require('crypto');
 const emailService = require('../utils/emailService');
 
@@ -103,10 +104,6 @@ exports.createReservation = async (req, res) => {
 
     // Get trip with pricing info
     const trip = await Trip.findByPk(tourId, {
-      include: [
-        { model: Train, as: 'train' },
-        { model: TripDeparture, as: 'departures' }
-      ],
       transaction: t,
       lock: t.LOCK.UPDATE,
     });
@@ -132,7 +129,7 @@ exports.createReservation = async (req, res) => {
       departure = await TripDeparture.findOne({
         where: {
           trip_id: tourId,
-          departure_time: { [sequelize.Op.gt]: new Date() }
+          departure_time: { [Op.gt]: new Date() }
         },
         order: [['departure_time', 'ASC']],
         transaction: t,
@@ -306,8 +303,8 @@ exports.processPayment = async (req, res) => {
       });
     }
 
-    // Get Booking
-    const Booking = await Booking.findOne({
+    // Get booking
+    const booking = await Booking.findOne({
       where: {
         id,
         user_id: req.user.id,
@@ -317,7 +314,7 @@ exports.processPayment = async (req, res) => {
       lock: t.LOCK.UPDATE,
     });
 
-    if (!Booking) {
+    if (!booking) {
       await t.rollback();
       return res.status(404).json({
         success: false,
@@ -325,11 +322,11 @@ exports.processPayment = async (req, res) => {
       });
     }
 
-    if (Booking.status === 'confirmed') {
+    if (booking.status === 'confirmed') {
       await t.rollback();
       return res.status(400).json({
         success: false,
-        message: 'Payment already completed for this Booking',
+        message: 'Payment already completed for this booking',
       });
     }
 
@@ -362,20 +359,26 @@ exports.processPayment = async (req, res) => {
 
       // Simulate payment processing
       console.log('Processing credit card payment:', {
-        amount: Booking.price,
+        amount: booking.total_price,
         cardNumber: cardNumber.slice(-4),
         cardHolder: cardHolder,
       });
     } else {
       // Cash payment - will be paid at station
-      console.log('Cash payment registered for Booking:', Booking.booking_reference);
+      console.log('Cash payment registered for booking:', booking.booking_reference);
     }
 
     // Generate seat number (simple implementation)
-    const seatNumber = `${Booking.seat_class === 'first' ? 'F' : 'S'}${Math.floor(Math.random() * 100) + 1}`;
+    let seatPrefix = 'E'; // Economic
+    if (booking.seat_class.toLowerCase() === 'first') {
+      seatPrefix = 'F';
+    } else if (booking.seat_class.toLowerCase() === 'second') {
+      seatPrefix = 'S';
+    }
+    const seatNumber = `${seatPrefix}${Math.floor(Math.random() * 100) + 1}`;
 
-    // Update Booking
-    await Booking.update(
+    // Update booking
+    await booking.update(
       {
         status: 'confirmed',
         seat_number: seatNumber,
@@ -407,7 +410,7 @@ exports.processPayment = async (req, res) => {
         ? 'Payment processed successfully' 
         : 'Booking confirmed. Please pay at the station before departure.',
       data: {
-        Booking: {
+        booking: {
           id: updatedReservation.id,
           seatClass: updatedReservation.seat_class,
           seatNumber: updatedReservation.seat_number,

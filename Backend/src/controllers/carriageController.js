@@ -50,6 +50,7 @@ exports.getAllCarriages = async (req, res) => {
         id: carriage.id,
         carriageNumber: carriage.carriage_number,
         carriageTypeId: carriage.carriage_type_id,
+        model: carriage.model,
         carriageType: carriage.carriageType ? {
           id: carriage.carriageType.carriage_type_id,
           type: carriage.carriageType.type,
@@ -76,66 +77,74 @@ exports.createCarriage = async (req, res) => {
   try {
     console.log('Create carriage request body:', req.body);
     // Accept both camelCase (frontend) and snake_case (API)
-    const name = req.body.name;
-    const class_type = req.body.class_type || req.body.classType;
-    const seats_count = req.body.seats_count || req.body.seatsCount;
-    
-    
+    const carriageNumber = req.body.carriageNumber || req.body.carriage_number;
+    const carriageTypeId = req.body.carriageTypeId || req.body.carriage_type_id;
+    const model = req.body.model;
 
     // Validation
-    if (!name || !class_type || !seats_count) {
-      console.log('Validation failed:', { name, class_type, seats_count });
+    if (!carriageNumber || !carriageTypeId) {
+      console.log('Validation failed:', { carriageNumber, carriageTypeId });
       return res.status(400).json({
         success: false,
         message: 'Validation failed',
         errors: [
-          !name && { field: 'name', message: 'Name is required' },
-          !class_type && { field: 'classType', message: 'Class type is required' },
-          !seats_count && { field: 'seatsCount', message: 'Seats count is required' },
+          !carriageNumber && { field: 'carriageNumber', message: 'Carriage number is required' },
+          !carriageTypeId && { field: 'carriageTypeId', message: 'Carriage type ID is required' },
         ].filter(Boolean),
       });
     }
 
-    if (!['first', 'second', 'economic'].includes(class_type)) {
+    // Verify carriage type exists
+    const carriageType = await CarriageType.findByPk(carriageTypeId);
+    if (!carriageType) {
       return res.status(400).json({
         success: false,
-        message: 'Validation failed',
-        errors: [
-          { field: 'classType', message: 'Class type must be first, second, or economic' },
-        ],
+        message: 'Invalid carriage type ID',
       });
     }
 
-    if (seats_count < 1) {
+    // Check if carriage number already exists
+    const existing = await Carriage.findOne({
+      where: { carriage_number: carriageNumber },
+    });
+    
+    if (existing) {
       return res.status(400).json({
         success: false,
-        message: 'Validation failed',
-        errors: [
-          { field: 'seatsCount', message: 'Seats count must be at least 1' },
-        ],
+        message: 'Carriage number already exists',
       });
     }
 
     const carriage = await Carriage.create({
-      name,
-      class_type,
-      seats_count,
+      carriage_number: carriageNumber,
+      carriage_type_id: carriageTypeId,
       model: model || null,
-      description: description || null,
+    });
+
+    // Reload with carriage type
+    await carriage.reload({
+      include: [{
+        model: CarriageType,
+        as: 'carriageType',
+      }],
     });
 
     res.status(201).json({
       success: true,
       message: 'Carriage created successfully',
       data: {
-        carriage: {
-          id: carriage.id,
-          name: carriage.name,
-          classType: carriage.class_type,
-          seatsCount: carriage.seats_count,
-
-
-        },
+        id: carriage.id,
+        carriageNumber: carriage.carriage_number,
+        carriageTypeId: carriage.carriage_type_id,
+        model: carriage.model,
+        carriageType: carriage.carriageType ? {
+          id: carriage.carriageType.carriage_type_id,
+          type: carriage.carriageType.type,
+          capacity: carriage.carriageType.capacity,
+          price: parseFloat(carriage.carriageType.price),
+        } : null,
+        createdAt: carriage.created_at,
+        updatedAt: carriage.updated_at,
       },
     });
   } catch (error) {
@@ -154,11 +163,9 @@ exports.updateCarriage = async (req, res) => {
   try {
     const { id } = req.params;
     // Accept both camelCase (frontend) and snake_case (API)
-    const name = req.body.name;
-    const class_type = req.body.class_type || req.body.classType;
-    const seats_count = req.body.seats_count || req.body.seatsCount;
-    
-    
+    const carriageNumber = req.body.carriageNumber || req.body.carriage_number;
+    const carriageTypeId = req.body.carriageTypeId || req.body.carriage_type_id;
+    const model = req.body.model;
 
     const carriage = await Carriage.findByPk(id);
     if (!carriage) {
@@ -168,49 +175,61 @@ exports.updateCarriage = async (req, res) => {
       });
     }
 
-    // Validate class_type if provided
-    if (class_type && !['first', 'second', 'economic'].includes(class_type)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: [
-          { field: 'classType', message: 'Class type must be first, second, or economic' },
-        ],
-      });
+    // Verify carriage type exists if provided
+    if (carriageTypeId) {
+      const carriageType = await CarriageType.findByPk(carriageTypeId);
+      if (!carriageType) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid carriage type ID',
+        });
+      }
     }
 
-    // Validate seats_count if provided
-    if (seats_count !== undefined && seats_count < 1) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: [
-          { field: 'seatsCount', message: 'Seats count must be at least 1' },
-        ],
+    // Check if carriage number already exists (if changing)
+    if (carriageNumber && carriageNumber !== carriage.carriage_number) {
+      const existing = await Carriage.findOne({
+        where: { carriage_number: carriageNumber },
       });
+      
+      if (existing) {
+        return res.status(400).json({
+          success: false,
+          message: 'Carriage number already exists',
+        });
+      }
     }
 
     await carriage.update({
-      name: name || carriage.name,
-      class_type: class_type || carriage.class_type,
-      seats_count: seats_count !== undefined ? seats_count : carriage.seats_count,
-      
-      
-      updated_at: new Date(),
+      carriage_number: carriageNumber || carriage.carriage_number,
+      carriage_type_id: carriageTypeId || carriage.carriage_type_id,
+      model: model !== undefined ? model : carriage.model,
+    });
+
+    // Reload with carriage type
+    await carriage.reload({
+      include: [{
+        model: CarriageType,
+        as: 'carriageType',
+      }],
     });
 
     res.json({
       success: true,
       message: 'Carriage updated successfully',
       data: {
-        carriage: {
-          id: carriage.id,
-          name: carriage.name,
-          classType: carriage.class_type,
-          seatsCount: carriage.seats_count,
-
-
-        },
+        id: carriage.id,
+        carriageNumber: carriage.carriage_number,
+        carriageTypeId: carriage.carriage_type_id,
+        model: carriage.model,
+        carriageType: carriage.carriageType ? {
+          id: carriage.carriageType.carriage_type_id,
+          type: carriage.carriageType.type,
+          capacity: carriage.carriageType.capacity,
+          price: parseFloat(carriage.carriageType.price),
+        } : null,
+        createdAt: carriage.created_at,
+        updatedAt: carriage.updated_at,
       },
     });
   } catch (error) {

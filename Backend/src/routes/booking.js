@@ -18,11 +18,9 @@ router.post(
   authMiddleware,
   [
     body('tourId').isInt().withMessage('Valid tour ID is required'),
-    body('passengerName').trim().notEmpty().withMessage('Passenger name is required'),
-    body('passengerNationalId').trim().notEmpty().withMessage('Passenger national ID is required'),
     body('seatClass')
-      .isIn(['first', 'second'])
-      .withMessage('Seat class must be either first or second'),
+      .isIn(['first', 'second', 'economic'])
+      .withMessage('Seat class must be first, second, or economic'),
   ],
   validate,
   bookingController.createReservation
