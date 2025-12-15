@@ -1,4 +1,4 @@
-const { Booking, Trip, Train, Station, User, TripDeparture, sequelize } = require('../models');
+const { Booking, Trip, Train, Station, User, TripDeparture, Carriage, CarriageType, TrainCarriage, sequelize } = require('../models');
 const { Op } = require('sequelize');
 const crypto = require('crypto');
 const emailService = require('../utils/emailService');
@@ -16,6 +16,10 @@ exports.getUserReservations = async (req, res) => {
     const reservations = await Booking.findAll({
       where: { user_id: req.user.id },
       include: [
+        {
+          model: CarriageType,
+          as: 'carriageType',
+        },
         {
           model: TripDeparture,
           as: 'tripDeparture',
@@ -39,7 +43,8 @@ exports.getUserReservations = async (req, res) => {
       success: true,
       data: reservations.map(r => ({
         id: r.id,
-        seatClass: r.seat_class,
+        seatClass: r.carriageType?.type || 'Unknown',
+        carriageTypeId: r.carriage_type_id,
         seatNumber: r.seat_number,
         numberOfSeats: r.number_of_seats,
         totalPrice: parseFloat(r.total_price),
@@ -102,10 +107,14 @@ exports.createReservation = async (req, res) => {
       });
     }
 
-    // Get trip with pricing info
-    const trip = await Trip.findByPk(tourId, {
-      transaction: t,
-      lock: t.LOCK.UPDATE,
+    // Get trip with train info
+    const trip = await Trip.findOne({
+      where: { id: tourId },
+      include: [{
+        model: Train,
+        as: 'train',
+        required: true,
+      }],
     });
 
     if (!trip) {
@@ -115,6 +124,49 @@ exports.createReservation = async (req, res) => {
         message: 'Trip not found',
       });
     }
+
+    // Map seat class to carriage type
+    let carriageTypeFilter;
+    const seatClassLower = seatClass.toLowerCase();
+    if (seatClassLower === 'first') {
+      carriageTypeFilter = 'first class';
+    } else if (seatClassLower === 'second') {
+      carriageTypeFilter = 'second class';
+    } else if (seatClassLower === 'economic') {
+      carriageTypeFilter = 'third class'; // economic maps to third class carriages
+    }
+
+    // Get train carriages for the requested class
+    const trainCarriages = await TrainCarriage.findAll({
+      where: { train_id: trip.train_id },
+      include: [{
+        model: Carriage,
+        as: 'carriage',
+        required: true,
+        include: [{
+          model: CarriageType,
+          as: 'carriageType',
+          where: { type: carriageTypeFilter },
+          required: true,
+        }],
+      }],
+    });
+
+    if (!trainCarriages || trainCarriages.length === 0) {
+      await t.rollback();
+      return res.status(400).json({
+        success: false,
+        message: `No ${seatClass} class carriages available on this train`,
+      });
+    }
+
+    // Calculate total available seats for this class
+    let totalSeatsForClass = 0;
+    trainCarriages.forEach(tc => {
+      const capacity = tc.carriage.carriageType.capacity || 0;
+      const quantity = tc.quantity || 1;
+      totalSeatsForClass += capacity * quantity;
+    });
 
     // Find the specific departure or use the first available one
     let departure;
@@ -145,18 +197,42 @@ exports.createReservation = async (req, res) => {
       });
     }
 
-    // Check seat availability
-    if (departure.available_seats < numberOfSeats) {
+    // Get carriage type ID for the booking
+    const carriageType = await CarriageType.findOne({
+      where: { type: carriageTypeFilter },
+    });
+
+    if (!carriageType) {
       await t.rollback();
       return res.status(400).json({
         success: false,
-        message: `Only ${departure.available_seats} seats available for this departure`,
+        message: `${seatClass} class type not found`,
       });
     }
 
-    // Get price per seat based on class
+    // Count already booked seats for this departure and class
+    const bookedSeats = await Booking.sum('number_of_seats', {
+      where: {
+        trip_departure_id: departure.trip_departure_id,
+        carriage_type_id: carriageType.carriage_type_id,
+        status: ['pending', 'confirmed'],
+      },
+      transaction: t,
+    }) || 0;
+
+    const availableSeats = totalSeatsForClass - bookedSeats;
+
+    // Check seat availability
+    if (availableSeats < numberOfSeats) {
+      await t.rollback();
+      return res.status(400).json({
+        success: false,
+        message: `Only ${availableSeats} seats available for ${seatClass} class on this departure`,
+      });
+    }
+
+    // Get price per seat based on class from trip
     let pricePerSeat;
-    const seatClassLower = seatClass.toLowerCase();
     if (seatClassLower === 'first') {
       pricePerSeat = trip.first_class_price;
     } else if (seatClassLower === 'second') {
@@ -169,7 +245,7 @@ exports.createReservation = async (req, res) => {
       await t.rollback();
       return res.status(400).json({
         success: false,
-        message: `${seatClass} class is not available for this trip`,
+        message: `${seatClass} class is not available for this trip (no pricing set)`,
       });
     }
 
@@ -182,9 +258,8 @@ exports.createReservation = async (req, res) => {
     const booking = await Booking.create(
       {
         user_id: req.user.id,
-        trip_id: tourId,
         trip_departure_id: departure.trip_departure_id,
-        seat_class: seatClass,
+        carriage_type_id: carriageType.carriage_type_id,
         seat_number: null, // Will assign after payment
         number_of_seats: numberOfSeats,
         total_price: totalPrice,
@@ -194,17 +269,15 @@ exports.createReservation = async (req, res) => {
       { transaction: t }
     );
 
-    // Reduce available seats for this specific departure
-    await departure.update(
-      { available_seats: departure.available_seats - numberOfSeats },
-      { transaction: t }
-    );
-
     await t.commit();
 
-    // Fetch complete Booking
+    // Fetch complete booking
     const completeReservation = await Booking.findByPk(booking.id, {
       include: [
+        {
+          model: CarriageType,
+          as: 'carriageType',
+        },
         {
           model: TripDeparture,
           as: 'tripDeparture',
@@ -228,14 +301,13 @@ exports.createReservation = async (req, res) => {
       const user = await User.findByPk(req.user.id);
       await emailService.sendBookingConfirmation(user.email, user.full_name, {
         reference: completeReservation.booking_reference,
-        trainNumber: completeReservation.tripDeparture.trip.train.train_number,
-        from: completeReservation.tripDeparture.trip.departureStation.name,
-        to: completeReservation.tripDeparture.trip.arrivalStation.name,
-        departureTime: new Date(completeReservation.tripDeparture.departure_time).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }),
-        arrivalTime: new Date(completeReservation.tripDeparture.arrival_time).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }),
-        seatClass: completeReservation.seat_class,
+        trainName: completeReservation.tripDeparture.trip.train.train_number,
+        origin: completeReservation.tripDeparture.trip.departureStation.name,
+        destination: completeReservation.tripDeparture.trip.arrivalStation.name,
+        departure: new Date(completeReservation.tripDeparture.departure_time).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }),
+        seatClass: completeReservation.carriageType?.type || 'Unknown',
         seats: completeReservation.number_of_seats,
-        totalPrice: parseFloat(completeReservation.total_price),
+        price: parseFloat(completeReservation.total_price),
       });
     } catch (emailError) {
       console.error('Failed to send booking confirmation email:', emailError);
@@ -247,7 +319,8 @@ exports.createReservation = async (req, res) => {
       data: {
         reservation: {
           id: completeReservation.id,
-          seatClass: completeReservation.seat_class,
+          seatClass: completeReservation.carriageType?.type || 'Unknown',
+          carriageTypeId: completeReservation.carriage_type_id,
           numberOfSeats: completeReservation.number_of_seats,
           totalPrice: parseFloat(completeReservation.total_price),
           bookingReference: completeReservation.booking_reference,
@@ -309,7 +382,10 @@ exports.processPayment = async (req, res) => {
         id,
         user_id: req.user.id,
       },
-      include: [{ model: Trip, as: 'trip' }],
+      include: [{
+        model: CarriageType,
+        as: 'carriageType',
+      }],
       transaction: t,
       lock: t.LOCK.UPDATE,
     });
@@ -369,10 +445,11 @@ exports.processPayment = async (req, res) => {
     }
 
     // Generate seat number (simple implementation)
-    let seatPrefix = 'E'; // Economic
-    if (booking.seat_class.toLowerCase() === 'first') {
+    const carriageTypeLower = booking.carriageType?.type?.toLowerCase() || 'third class';
+    let seatPrefix = 'E'; // Economic/Third class
+    if (carriageTypeLower === 'first class') {
       seatPrefix = 'F';
-    } else if (booking.seat_class.toLowerCase() === 'second') {
+    } else if (carriageTypeLower === 'second class') {
       seatPrefix = 'S';
     }
     const seatNumber = `${seatPrefix}${Math.floor(Math.random() * 100) + 1}`;
@@ -389,16 +466,26 @@ exports.processPayment = async (req, res) => {
 
     await t.commit();
 
-    // Fetch updated Booking
+    // Fetch updated booking
     const updatedReservation = await Booking.findByPk(id, {
       include: [
         {
-          model: Trip,
-          as: 'trip',
+          model: CarriageType,
+          as: 'carriageType',
+        },
+        {
+          model: TripDeparture,
+          as: 'tripDeparture',
           include: [
-            { model: Train, as: 'train' },
-            { model: Station, as: 'departureStation' },
-            { model: Station, as: 'arrivalStation' },
+            {
+              model: Trip,
+              as: 'trip',
+              include: [
+                { model: Train, as: 'train' },
+                { model: Station, as: 'departureStation' },
+                { model: Station, as: 'arrivalStation' },
+              ],
+            },
           ],
         },
       ],
@@ -412,28 +499,31 @@ exports.processPayment = async (req, res) => {
       data: {
         booking: {
           id: updatedReservation.id,
-          seatClass: updatedReservation.seat_class,
+          seatClass: updatedReservation.carriageType?.type || 'Unknown',
+          carriageTypeId: updatedReservation.carriage_type_id,
           seatNumber: updatedReservation.seat_number,
           numberOfSeats: updatedReservation.number_of_seats,
           totalPrice: parseFloat(updatedReservation.total_price),
           bookingReference: updatedReservation.booking_reference,
           status: updatedReservation.status,
           paymentMethod: paymentMethod,
-          trip: {
-            id: updatedReservation.trip.id,
-            departureTime: updatedReservation.trip.departure_time,
-            arrivalTime: updatedReservation.trip.arrival_time,
-            train: {
-              trainNumber: updatedReservation.trip.train.train_number,
-              
-            },
-            departureStation: {
-              name: updatedReservation.trip.departureStation.name,
-              city: updatedReservation.trip.departureStation.city,
-            },
-            arrivalStation: {
-              name: updatedReservation.trip.arrivalStation.name,
-              city: updatedReservation.trip.arrivalStation.city,
+          tripDeparture: {
+            id: updatedReservation.tripDeparture.trip_departure_id,
+            departureTime: updatedReservation.tripDeparture.departure_time,
+            arrivalTime: updatedReservation.tripDeparture.arrival_time,
+            trip: {
+              id: updatedReservation.tripDeparture.trip.id,
+              train: {
+                trainNumber: updatedReservation.tripDeparture.trip.train.train_number,
+              },
+              departureStation: {
+                name: updatedReservation.tripDeparture.trip.departureStation.name,
+                city: updatedReservation.tripDeparture.trip.departureStation.city,
+              },
+              arrivalStation: {
+                name: updatedReservation.tripDeparture.trip.arrivalStation.name,
+                city: updatedReservation.tripDeparture.trip.arrivalStation.city,
+              },
             },
           },
         },

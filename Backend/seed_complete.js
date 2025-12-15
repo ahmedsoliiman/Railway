@@ -150,16 +150,16 @@ async function seedDatabase() {
     // ============ CARRIAGES ============
     console.log('Creating carriages...');
     const carriages = await Carriage.bulkCreate([
-      { carriage_number: 'C001', carriage_type_id: carriageTypes[0].carriage_type_id },
-      { carriage_number: 'C002', carriage_type_id: carriageTypes[0].carriage_type_id },
-      { carriage_number: 'C003', carriage_type_id: carriageTypes[1].carriage_type_id },
-      { carriage_number: 'C004', carriage_type_id: carriageTypes[1].carriage_type_id },
-      { carriage_number: 'C005', carriage_type_id: carriageTypes[2].carriage_type_id },
-      { carriage_number: 'C006', carriage_type_id: carriageTypes[2].carriage_type_id },
-      { carriage_number: 'C007', carriage_type_id: carriageTypes[2].carriage_type_id },
-      { carriage_number: 'C008', carriage_type_id: carriageTypes[3].carriage_type_id },
-      { carriage_number: 'C009', carriage_type_id: carriageTypes[3].carriage_type_id },
-      { carriage_number: 'C010', carriage_type_id: carriageTypes[1].carriage_type_id },
+      { carriage_number: 'C001', carriage_type_id: carriageTypes[0].carriage_type_id, model: 'Bombardier Talent 2' },
+      { carriage_number: 'C002', carriage_type_id: carriageTypes[0].carriage_type_id, model: 'Siemens Desiro ML' },
+      { carriage_number: 'C003', carriage_type_id: carriageTypes[1].carriage_type_id, model: 'Alstom Coradia' },
+      { carriage_number: 'C004', carriage_type_id: carriageTypes[1].carriage_type_id, model: 'CAF Civity' },
+      { carriage_number: 'C005', carriage_type_id: carriageTypes[2].carriage_type_id, model: 'Hyundai Rotem EMU' },
+      { carriage_number: 'C006', carriage_type_id: carriageTypes[2].carriage_type_id, model: 'Stadler FLIRT' },
+      { carriage_number: 'C007', carriage_type_id: carriageTypes[2].carriage_type_id, model: 'Bombardier Electrostar' },
+      { carriage_number: 'C008', carriage_type_id: carriageTypes[3].carriage_type_id, model: 'Siemens Nightjet' },
+      { carriage_number: 'C009', carriage_type_id: carriageTypes[3].carriage_type_id, model: 'Talgo VII' },
+      { carriage_number: 'C0010', carriage_type_id: carriageTypes[0].carriage_type_id, model: 'Alstom Avelia Liberty' },
     ]);
     console.log(`✅ Created ${carriages.length} carriages\n`);
 
@@ -206,60 +206,90 @@ async function seedDatabase() {
         origin_station_id: stations[0].id,
         destination_station_id: stations[1].id,
         quantities: 120,
+        first_class_price: 150.00,
+        second_class_price: 100.00,
+        economic_price: 50.00,
       },
       {
         train_id: trains[1].id,
         origin_station_id: stations[0].id,
         destination_station_id: stations[2].id,
         quantities: 70,
+        first_class_price: 400.00,
+        second_class_price: 250.00,
+        economic_price: 0,
       },
       {
         train_id: trains[2].id,
         origin_station_id: stations[0].id,
         destination_station_id: stations[3].id,
         quantities: 200,
+        first_class_price: 0,
+        second_class_price: 200.00,
+        economic_price: 120.00,
       },
       {
         train_id: trains[3].id,
         origin_station_id: stations[1].id,
         destination_station_id: stations[5].id,
         quantities: 180,
+        first_class_price: 180.00,
+        second_class_price: 120.00,
+        economic_price: 80.00,
       },
       {
         train_id: trains[4].id,
         origin_station_id: stations[0].id,
         destination_station_id: stations[6].id,
         quantities: 100,
+        first_class_price: 220.00,
+        second_class_price: 0,
+        economic_price: 0,
       },
       {
         train_id: trains[5].id,
         origin_station_id: stations[4].id,
         destination_station_id: stations[7].id,
         quantities: 180,
+        first_class_price: 0,
+        second_class_price: 130.00,
+        economic_price: 70.00,
       },
       {
         train_id: trains[0].id,
         origin_station_id: stations[1].id,
         destination_station_id: stations[0].id,
         quantities: 120,
+        first_class_price: 150.00,
+        second_class_price: 100.00,
+        economic_price: 50.00,
       },
       {
         train_id: trains[1].id,
         origin_station_id: stations[2].id,
         destination_station_id: stations[3].id,
         quantities: 70,
+        first_class_price: 350.00,
+        second_class_price: 220.00,
+        economic_price: 0,
       },
       {
         train_id: trains[2].id,
         origin_station_id: stations[3].id,
         destination_station_id: stations[0].id,
         quantities: 200,
+        first_class_price: 0,
+        second_class_price: 200.00,
+        economic_price: 120.00,
       },
       {
         train_id: trains[3].id,
         origin_station_id: stations[5].id,
         destination_station_id: stations[1].id,
         quantities: 180,
+        first_class_price: 180.00,
+        second_class_price: 120.00,
+        economic_price: 80.00,
       },
     ]);
     console.log(`✅ Created ${trips.length} trips\n`);
@@ -404,57 +434,24 @@ async function seedDatabase() {
 
     // ============ PAYMENTS ============
     console.log('Creating payments...');
-    const payments = await Payment.bulkCreate([
-      {
-        booking_id: bookings[0].booking_id,
-        amount: bookings[0].total_price,
+    // Reload bookings to ensure we have all IDs
+    const bookingsWithIds = await Booking.findAll({ order: [['booking_id', 'ASC']] });
+    
+    // Create payments individually to avoid bulkCreate issues with foreign keys
+    const payments = [];
+    for (let i = 0; i < Math.min(7, bookingsWithIds.length); i++) {
+      const paymentMethods = ['credit_card', 'credit_card', 'debit_card', 'cash', 'credit_card', 'debit_card', 'cash'];
+      const paymentStatuses = ['completed', 'completed', 'completed', 'pending', 'completed', 'completed', 'pending'];
+      
+      const payment = await Payment.create({
+        booking_id: bookingsWithIds[i].id,  // Use .id since Sequelize aliases booking_id as id
+        amount: bookingsWithIds[i].total_price,
         date: new Date(),
-        method: 'credit_card',
-        status: 'completed',
-      },
-      {
-        booking_id: bookings[1].booking_id,
-        amount: bookings[1].total_price,
-        date: new Date(),
-        method: 'credit_card',
-        status: 'completed',
-      },
-      {
-        booking_id: bookings[2].booking_id,
-        amount: bookings[2].total_price,
-        date: new Date(),
-        method: 'debit_card',
-        status: 'completed',
-      },
-      {
-        booking_id: bookings[3].booking_id,
-        amount: bookings[3].total_price,
-        date: new Date(),
-        method: 'cash',
-        status: 'pending',
-      },
-      {
-        booking_id: bookings[4].booking_id,
-        amount: bookings[4].total_price,
-        date: new Date(),
-        method: 'credit_card',
-        status: 'completed',
-      },
-      {
-        booking_id: bookings[5].booking_id,
-        amount: bookings[5].total_price,
-        date: new Date(),
-        method: 'debit_card',
-        status: 'completed',
-      },
-      {
-        booking_id: bookings[6].booking_id,
-        amount: bookings[6].total_price,
-        date: new Date(),
-        method: 'cash',
-        status: 'pending',
-      },
-    ]);
+        method: paymentMethods[i],
+        status: paymentStatuses[i],
+      });
+      payments.push(payment);
+    }
     console.log(`✅ Created ${payments.length} payments\n`);
 
     console.log('🎉 Database seeding completed successfully!\n');

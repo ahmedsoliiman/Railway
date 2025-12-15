@@ -166,6 +166,52 @@ exports.getTripById = async (req, res) => {
       });
     }
 
+    // Get available seat classes from train carriages
+    const { TrainCarriage, Carriage, CarriageType } = require('../models');
+    const trainCarriages = await TrainCarriage.findAll({
+      where: { train_id: trip.train_id },
+      include: [{
+        model: Carriage,
+        as: 'carriage',
+        required: true,
+        include: [{
+          model: CarriageType,
+          as: 'carriageType',
+          required: true,
+        }],
+      }],
+    });
+
+    // Determine available seat classes
+    const availableSeatClasses = [];
+    const carriageTypes = new Set();
+    
+    console.log(`🔍 Trip ${trip.id} uses train ${trip.train_id}, found ${trainCarriages.length} carriage assignments`);
+    trainCarriages.forEach(tc => {
+      const type = tc.carriage.carriageType.type.toLowerCase();
+      console.log(`  - Carriage ${tc.carriage.carriage_number}: type="${tc.carriage.carriageType.type}" (lowercase: "${type}")`);
+      carriageTypes.add(type);
+    });
+
+    console.log(`📊 Carriage types found:`, Array.from(carriageTypes));
+    console.log(`💰 Trip pricing: first=$${trip.first_class_price}, second=$${trip.second_class_price}, economic=$${trip.economic_price}`);
+
+    // Map carriage types to seat class names and check if pricing exists
+    if (carriageTypes.has('first class') && trip.first_class_price > 0) {
+      console.log('✅ Adding First Class');
+      availableSeatClasses.push({ value: 'first', label: 'First Class', price: parseFloat(trip.first_class_price) });
+    }
+    if (carriageTypes.has('second class') && trip.second_class_price > 0) {
+      console.log('✅ Adding Second Class');
+      availableSeatClasses.push({ value: 'second', label: 'Second Class', price: parseFloat(trip.second_class_price) });
+    }
+    if (carriageTypes.has('third class') && trip.economic_price > 0) {
+      console.log('✅ Adding Economic/Third Class');
+      availableSeatClasses.push({ value: 'economic', label: 'Economic Class', price: parseFloat(trip.economic_price) });
+    }
+
+    console.log(`🎯 Final availableSeatClasses:`, availableSeatClasses);
+
     res.json({
       success: true,
       data: {
@@ -175,6 +221,7 @@ exports.getTripById = async (req, res) => {
         secondClassPrice: trip.second_class_price ? parseFloat(trip.second_class_price) : null,
         economicPrice: trip.economic_price ? parseFloat(trip.economic_price) : null,
         quantities: trip.quantities,
+        availableSeatClasses: availableSeatClasses,
         train: {
           id: trip.train.id,
           trainNumber: trip.train.train_number,
