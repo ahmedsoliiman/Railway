@@ -157,32 +157,122 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                         style: Theme.of(context).textTheme.headlineSmall,
                       ),
                       const SizedBox(height: 16),
-                      if (trip.firstClassPrice != null)
-                        Card(
-                          child: ListTile(
-                            leading: const Icon(Icons.airline_seat_recline_extra, color: AppTheme.primaryColor),
-                            title: const Text('First Class'),
-                            subtitle: const Text('Premium seats with extra legroom'),
-                            trailing: Text(
-                              '\$${trip.firstClassPrice!.toStringAsFixed(2)}',
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                color: AppTheme.primaryColor,
+                      if (trip.availableSeatClasses != null && trip.availableSeatClasses!.isNotEmpty)
+                        ...trip.availableSeatClasses!.map((classInfo) {
+                          final String classValue = classInfo['value'] as String;
+                          final String classLabel = classInfo['label'] as String;
+                          final double classPrice = (classInfo['price'] as num).toDouble();
+                          
+                          // Determine icon and color based on class type
+                          IconData iconData;
+                          Color iconColor;
+                          String subtitle;
+                          
+                          if (classValue == 'first') {
+                            iconData = Icons.airline_seat_recline_extra;
+                            iconColor = AppTheme.primaryColor;
+                            subtitle = 'Premium seats with extra legroom';
+                          } else if (classValue == 'second') {
+                            iconData = Icons.event_seat;
+                            iconColor = AppTheme.secondaryColor;
+                            subtitle = 'Standard comfortable seats';
+                          } else {
+                            iconData = Icons.airline_seat_recline_normal;
+                            iconColor = AppTheme.warningColor;
+                            subtitle = 'Budget-friendly seats';
+                          }
+                          
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Card(
+                              child: ListTile(
+                                leading: Icon(iconData, color: iconColor),
+                                title: Text(classLabel),
+                                subtitle: Text(subtitle),
+                                trailing: Text(
+                                  '\$${classPrice.toStringAsFixed(2)}',
+                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    color: iconColor,
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
-                        ),
-                      const SizedBox(height: 8),
-                      if (trip.secondClassPrice != null)
-                        Card(
-                          child: ListTile(
-                            leading: const Icon(Icons.event_seat, color: AppTheme.secondaryColor),
-                            title: const Text('Second Class'),
-                            subtitle: const Text('Standard comfortable seats'),
-                            trailing: Text(
-                              '\$${trip.secondClassPrice!.toStringAsFixed(2)}',
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                color: AppTheme.secondaryColor,
+                          );
+                        }).toList()
+                      else if ((trip.firstClassPrice != null && trip.firstClassPrice! > 0) || 
+                               (trip.secondClassPrice != null && trip.secondClassPrice! > 0) || 
+                               (trip.economicPrice != null && trip.economicPrice! > 0))
+                        // Fallback to old pricing display if availableSeatClasses is not provided
+                        ...[
+                          if (trip.firstClassPrice != null && trip.firstClassPrice! > 0)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Card(
+                                child: ListTile(
+                                  leading: const Icon(Icons.airline_seat_recline_extra, color: AppTheme.primaryColor),
+                                  title: const Text('First Class'),
+                                  subtitle: const Text('Premium seats with extra legroom'),
+                                  trailing: Text(
+                                    '\$${trip.firstClassPrice!.toStringAsFixed(2)}',
+                                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                      color: AppTheme.primaryColor,
+                                    ),
+                                  ),
+                                ),
                               ),
+                            ),
+                          if (trip.secondClassPrice != null && trip.secondClassPrice! > 0)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Card(
+                                child: ListTile(
+                                  leading: const Icon(Icons.event_seat, color: AppTheme.secondaryColor),
+                                  title: const Text('Second Class'),
+                                  subtitle: const Text('Standard comfortable seats'),
+                                  trailing: Text(
+                                    '\$${trip.secondClassPrice!.toStringAsFixed(2)}',
+                                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                      color: AppTheme.secondaryColor,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          if (trip.economicPrice != null && trip.economicPrice! > 0)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Card(
+                                child: ListTile(
+                                  leading: const Icon(Icons.airline_seat_recline_normal, color: AppTheme.warningColor),
+                                  title: const Text('Economic Class'),
+                                  subtitle: const Text('Budget-friendly seats'),
+                                  trailing: Text(
+                                    '\$${trip.economicPrice!.toStringAsFixed(2)}',
+                                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                      color: AppTheme.warningColor,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ]
+                      else
+                        // No pricing configured for this trip
+                        Card(
+                          color: AppTheme.warningColor.withOpacity(0.1),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
+                              children: [
+                                Icon(Icons.warning_amber, color: AppTheme.warningColor),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    'Pricing not configured for this trip. Please contact support.',
+                                    style: TextStyle(color: AppTheme.warningColor),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -212,20 +302,20 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                       ),
 
                       // Facilities
-                      if (trip.trainNumber != null) ...[
-                        const SizedBox(height: 24),
-                        Text(
-                          'Facilities',
-                          style: Theme.of(context).textTheme.headlineSmall,
+                      ...[
+                      const SizedBox(height: 24),
+                      Text(
+                        'Facilities',
+                        style: Theme.of(context).textTheme.headlineSmall,
+                      ),
+                      const SizedBox(height: 16),
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Text(trip.trainNumber!),
                         ),
-                        const SizedBox(height: 16),
-                        Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Text(trip.trainNumber!),
-                          ),
-                        ),
-                      ],
+                      ),
+                    ],
                     ],
                   ),
                 ),
@@ -239,16 +329,22 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
           final trip = tripProvider.selectedTrip;
           if (trip == null || trip.quantities == 0) return const SizedBox.shrink();
 
+          // Check if any seat class is available with valid pricing
+          final bool hasAvailableClasses = (trip.availableSeatClasses != null && trip.availableSeatClasses!.isNotEmpty) ||
+              (trip.firstClassPrice != null && trip.firstClassPrice! > 0) ||
+              (trip.secondClassPrice != null && trip.secondClassPrice! > 0) ||
+              (trip.economicPrice != null && trip.economicPrice! > 0);
+
           return SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: ElevatedButton(
-                onPressed: () => Navigator.pushNamed(
+                onPressed: hasAvailableClasses ? () => Navigator.pushNamed(
                   context,
                   '/booking',
                   arguments: trip.id,
-                ),
-                child: const Text('Book This Trip'),
+                ) : null,
+                child: Text(hasAvailableClasses ? 'Book This Trip' : 'Booking Not Available'),
               ),
             ),
           );

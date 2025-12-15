@@ -21,6 +21,7 @@ class Trip {
   final double? economicPrice;
   final int quantities;
   final List<TripDeparture>? departures;
+  final List<Map<String, dynamic>>? availableSeatClasses;
 
   Trip({
     required this.id,
@@ -43,6 +44,7 @@ class Trip {
     this.economicPrice,
     required this.quantities,
     this.departures,
+    this.availableSeatClasses,
   });
 
   factory Trip.fromJson(Map<String, dynamic> json) {
@@ -105,6 +107,9 @@ class Trip {
           : null,
       quantities: json['quantities'] ?? json['availableSeats'] ?? json['available_seats'] ?? 0,
       departures: departures,
+      availableSeatClasses: json['availableSeatClasses'] != null 
+          ? List<Map<String, dynamic>>.from(json['availableSeatClasses'])
+          : null,
     );
   }
 

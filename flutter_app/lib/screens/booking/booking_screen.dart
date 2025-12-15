@@ -116,7 +116,7 @@ class _BookingScreenState extends State<BookingScreen> {
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 16),
-                if (trip.firstClassPrice != null)
+                if (trip.firstClassPrice != null && trip.firstClassPrice! > 0)
                   RadioListTile<String>(
                     value: 'First',
                     groupValue: _selectedClass,
@@ -125,7 +125,7 @@ class _BookingScreenState extends State<BookingScreen> {
                     subtitle: Text('\$${trip.firstClassPrice!.toStringAsFixed(2)} per seat'),
                     secondary: const Icon(Icons.airline_seat_recline_extra),
                   ),
-                if (trip.secondClassPrice != null)
+                if (trip.secondClassPrice != null && trip.secondClassPrice! > 0)
                   RadioListTile<String>(
                     value: 'Second',
                     groupValue: _selectedClass,
@@ -133,6 +133,36 @@ class _BookingScreenState extends State<BookingScreen> {
                     title: const Text('Second Class'),
                     subtitle: Text('\$${trip.secondClassPrice!.toStringAsFixed(2)} per seat'),
                     secondary: const Icon(Icons.event_seat),
+                  ),
+                if (trip.economicPrice != null && trip.economicPrice! > 0)
+                  RadioListTile<String>(
+                    value: 'Economic',
+                    groupValue: _selectedClass,
+                    onChanged: (value) => setState(() => _selectedClass = value!),
+                    title: const Text('Economic Class'),
+                    subtitle: Text('\$${trip.economicPrice!.toStringAsFixed(2)} per seat'),
+                    secondary: const Icon(Icons.airline_seat_recline_normal),
+                  ),
+                if ((trip.firstClassPrice == null || trip.firstClassPrice! <= 0) &&
+                    (trip.secondClassPrice == null || trip.secondClassPrice! <= 0) &&
+                    (trip.economicPrice == null || trip.economicPrice! <= 0))
+                  Card(
+                    color: AppTheme.warningColor.withOpacity(0.1),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          Icon(Icons.warning_amber, color: AppTheme.warningColor),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'No seat classes available for booking. Pricing not configured.',
+                              style: TextStyle(color: AppTheme.warningColor),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 const SizedBox(height: 24),
 
@@ -231,14 +261,26 @@ class _BookingScreenState extends State<BookingScreen> {
           );
         },
       ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: ElevatedButton(
-            onPressed: _handleBooking,
-            child: const Text('Continue to Payment'),
-          ),
-        ),
+      bottomNavigationBar: Consumer<TripProvider>(
+        builder: (context, tripProvider, child) {
+          final trip = tripProvider.selectedTrip;
+          if (trip == null) return const SizedBox.shrink();
+
+          // Check if any seat class is available with valid pricing
+          final bool hasAvailableClasses = (trip.firstClassPrice != null && trip.firstClassPrice! > 0) ||
+              (trip.secondClassPrice != null && trip.secondClassPrice! > 0) ||
+              (trip.economicPrice != null && trip.economicPrice! > 0);
+
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: ElevatedButton(
+                onPressed: hasAvailableClasses ? _handleBooking : null,
+                child: Text(hasAvailableClasses ? 'Continue to Payment' : 'No Classes Available'),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
