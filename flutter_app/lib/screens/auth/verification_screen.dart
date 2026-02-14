@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../config/theme.dart';
 import '../../providers/auth_provider.dart';
+import 'package:go_router/go_router.dart';
 
 class VerificationScreen extends StatefulWidget {
   const VerificationScreen({super.key});
@@ -25,7 +26,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final email = await authProvider.storageService.getEmail() ?? '';
-    
+
     final response = await authProvider.verifyEmail(
       email: email,
       code: _codeController.text.trim(),
@@ -36,16 +37,16 @@ class _VerificationScreenState extends State<VerificationScreen> {
     if (response['success'] == true) {
       // Fetch updated user data
       await authProvider.fetchCurrentUser();
-      
+
       if (!mounted) return;
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Email verified successfully!'),
           backgroundColor: AppTheme.successColor,
         ),
       );
-      Navigator.pushReplacementNamed(context, '/home');
+      context.pushReplacement('/home');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -59,7 +60,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
   Future<void> _handleResendCode() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final email = await authProvider.storageService.getEmail() ?? '';
-    
+
     final response = await authProvider.resendCode(email: email);
 
     if (!mounted) return;
@@ -123,8 +124,8 @@ class _VerificationScreenState extends State<VerificationScreen> {
                     'We\'ve sent a 6-digit verification code to your email. Please enter it below.',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppTheme.grayColor,
-                    ),
+                          color: AppTheme.grayColor,
+                        ),
                   ),
                   const SizedBox(height: 48),
 
@@ -163,14 +164,16 @@ class _VerificationScreenState extends State<VerificationScreen> {
                   Consumer<AuthProvider>(
                     builder: (context, authProvider, child) {
                       return ElevatedButton(
-                        onPressed: authProvider.isLoading ? null : _handleVerification,
+                        onPressed:
+                            authProvider.isLoading ? null : _handleVerification,
                         child: authProvider.isLoading
                             ? const SizedBox(
                                 height: 20,
                                 width: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white),
                                 ),
                               )
                             : const Text('Verify Email'),
@@ -188,7 +191,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
 
                   // Back to Login
                   TextButton(
-                    onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
+                    onPressed: () => context.pushReplacement('/login'),
                     child: const Text('Back to Login'),
                   ),
                 ],
@@ -200,4 +203,3 @@ class _VerificationScreenState extends State<VerificationScreen> {
     );
   }
 }
-

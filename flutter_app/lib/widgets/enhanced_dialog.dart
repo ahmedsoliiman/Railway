@@ -119,7 +119,7 @@ class EnhancedDialog extends StatelessWidget {
 
 // Enhanced Text Field
 class EnhancedTextField extends StatelessWidget {
-  final TextEditingController controller;
+  final TextEditingController? controller;
   final String label;
   final String? hint;
   final IconData? icon;
@@ -127,10 +127,13 @@ class EnhancedTextField extends StatelessWidget {
   final int maxLines;
   final TextInputType? keyboardType;
   final String? helperText;
+  final bool enabled;
+  final String? initialValue;
+  final void Function(String)? onChanged;
 
   const EnhancedTextField({
     super.key,
-    required this.controller,
+    this.controller,
     required this.label,
     this.hint,
     this.icon,
@@ -138,12 +141,18 @@ class EnhancedTextField extends StatelessWidget {
     this.maxLines = 1,
     this.keyboardType,
     this.helperText,
+    this.enabled = true,
+    this.initialValue,
+    this.onChanged,
   });
 
   @override
   Widget build(BuildContext context) {
     return TextFormField(
       controller: controller,
+      initialValue: initialValue,
+      enabled: enabled,
+      onChanged: onChanged,
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
@@ -165,7 +174,7 @@ class EnhancedTextField extends StatelessWidget {
           borderSide: const BorderSide(color: Colors.red, width: 2),
         ),
         filled: true,
-        fillColor: Colors.grey.shade50,
+        fillColor: enabled ? Colors.grey.shade50 : Colors.grey.shade200,
         helperText: helperText,
         helperMaxLines: 2,
       ),

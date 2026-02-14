@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../config/theme.dart';
 import '../../services/api_service.dart';
+import 'package:go_router/go_router.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -27,18 +28,18 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
     try {
       final apiService = ApiService();
-      final response = await apiService.forgotPassword(_emailController.text.trim());
+      final response =
+          await apiService.forgotPassword(_emailController.text.trim());
 
       if (!mounted) return;
 
       if (response['success']) {
         // Navigate to verify code screen
-        Navigator.pushNamed(
-          context,
+        context.push(
           '/verify-reset-code',
-          arguments: _emailController.text.trim(),
+          extra: _emailController.text.trim(),
         );
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Reset code sent to your email'),
@@ -47,7 +48,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(response['message'] ?? 'Failed to send reset code')),
+          SnackBar(
+              content:
+                  Text(response['message'] ?? 'Failed to send reset code')),
         );
       }
     } catch (e) {
@@ -109,7 +112,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       ),
                 ),
                 const SizedBox(height: 40),
-                
+
                 // Form
                 Form(
                   key: _formKey,
@@ -135,7 +138,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                         },
                       ),
                       const SizedBox(height: 32),
-                      
+
                       // Send Code Button
                       SizedBox(
                         width: double.infinity,
@@ -159,9 +162,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     ],
                   ),
                 ),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // Back to Login
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -186,4 +189,3 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     );
   }
 }
-

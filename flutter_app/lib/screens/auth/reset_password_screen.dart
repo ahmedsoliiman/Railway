@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../config/theme.dart';
 import '../../services/api_service.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
-  const ResetPasswordScreen({super.key});
+  final String email;
+  final String code;
+  const ResetPasswordScreen(
+      {super.key, required this.email, required this.code});
 
   @override
   State<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
@@ -16,16 +20,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
-  String? _email;
-  String? _code;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Get email and code from route arguments
-    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    _email = args?['email'];
-    _code = args?['code'];
+  void initState() {
+    super.initState();
   }
 
   @override
@@ -38,11 +36,11 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   Future<void> _resetPassword() async {
     if (!_formKey.currentState!.validate()) return;
 
-    if (_email == null || _code == null) {
+    if (widget.email.isEmpty || widget.code.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Invalid request. Please try again')),
       );
-      Navigator.popUntil(context, (route) => route.isFirst);
+      context.go('/login');
       return;
     }
 
@@ -51,9 +49,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     try {
       final apiService = ApiService();
       final response = await apiService.resetPassword(
-        _email!,
-        _code!,
-        _passwordController.text,
+        email: widget.email,
+        code: widget.code,
+        newPassword: _passwordController.text,
       );
 
       if (!mounted) return;
@@ -64,7 +62,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           context: context,
           barrierDismissible: false,
           builder: (context) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             title: const Row(
               children: [
                 Icon(Icons.check_circle, color: Colors.green, size: 30),
@@ -72,12 +71,13 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 Text('Success!'),
               ],
             ),
-            content: const Text('Your password has been reset successfully. You can now login with your new password.'),
+            content: const Text(
+                'Your password has been reset successfully. You can now login with your new password.'),
             actions: [
               ElevatedButton(
                 onPressed: () {
                   Navigator.of(context).pop();
-                  Navigator.popUntil(context, (route) => route.isFirst);
+                  context.go('/login');
                 },
                 child: const Text('Go to Login'),
               ),
@@ -86,7 +86,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(response['message'] ?? 'Failed to reset password')),
+          SnackBar(
+              content: Text(response['message'] ?? 'Failed to reset password')),
         );
       }
     } catch (e) {
@@ -148,7 +149,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       ),
                 ),
                 const SizedBox(height: 40),
-                
+
                 // Form
                 Form(
                   key: _formKey,
@@ -185,7 +186,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                         },
                       ),
                       const SizedBox(height: 16),
-                      
+
                       // Confirm Password Field
                       TextFormField(
                         controller: _confirmPasswordController,
@@ -201,7 +202,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                             ),
                             onPressed: () {
                               setState(() {
-                                _obscureConfirmPassword = !_obscureConfirmPassword;
+                                _obscureConfirmPassword =
+                                    !_obscureConfirmPassword;
                               });
                             },
                           ),
@@ -217,7 +219,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                         },
                       ),
                       const SizedBox(height: 32),
-                      
+
                       // Reset Button
                       SizedBox(
                         width: double.infinity,
@@ -249,4 +251,3 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     );
   }
 }
-

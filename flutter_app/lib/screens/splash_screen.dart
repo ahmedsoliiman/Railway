@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../config/theme.dart';
 import '../providers/auth_provider.dart';
 
@@ -14,32 +15,35 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _checkAuthStatus();
+    _checkAuth();
   }
 
-  Future<void> _checkAuthStatus() async {
-    await Future.delayed(const Duration(seconds: 2));
-    
+  Future<void> _checkAuth() async {
     if (!mounted) return;
-    
+
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final isLoggedIn = await authProvider.checkAuthStatus();
-    
+
+    // Ensure splash screen shows for at least 2 seconds
+    // This prevents the splash from disappearing too quickly in release mode
+    await Future.wait([
+      authProvider.checkAuthStatus(),
+      Future.delayed(const Duration(seconds: 2)),
+    ]);
+
+    if (!mounted) return;
+
+    final isLoggedIn = authProvider.isAuthenticated;
+
     if (isLoggedIn) {
-      await authProvider.loadUser();
-      if (mounted) {
-        // Check user role and route accordingly
-        final user = authProvider.user;
-        if (user?.role == 'admin') {
-          Navigator.pushReplacementNamed(context, '/admin');
-        } else {
-          Navigator.pushReplacementNamed(context, '/home');
-        }
+      // Check user role and route accordingly
+      final user = authProvider.user;
+      if (user?.role == 'admin') {
+        context.go('/admin');
+      } else {
+        context.go('/home');
       }
     } else {
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/login');
-      }
+      context.go('/login');
     }
   }
 
@@ -85,4 +89,3 @@ class _SplashScreenState extends State<SplashScreen> {
     );
   }
 }
-

@@ -23,17 +23,17 @@ class StorageService {
   }
 
   // Save user
-  Future<void> saveUser(User user) async {
+  Future<void> saveUser(Passenger user) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(AppConfig.userKey, jsonEncode(user.toJson()));
   }
 
   // Get user
-  Future<User?> getUser() async {
+  Future<Passenger?> getUser() async {
     final prefs = await SharedPreferences.getInstance();
     final userJson = prefs.getString(AppConfig.userKey);
     if (userJson != null) {
-      return User.fromJson(jsonDecode(userJson));
+      return Passenger.fromJson(jsonDecode(userJson));
     }
     return null;
   }

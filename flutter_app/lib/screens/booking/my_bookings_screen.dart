@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../config/theme.dart';
 import '../../providers/trip_provider.dart';
+import '../../models/booking.dart';
+import 'package:go_router/go_router.dart';
 
 class MyBookingsScreen extends StatefulWidget {
   const MyBookingsScreen({super.key});
@@ -11,7 +13,8 @@ class MyBookingsScreen extends StatefulWidget {
   State<MyBookingsScreen> createState() => _MyBookingsScreenState();
 }
 
-class _MyBookingsScreenState extends State<MyBookingsScreen> with SingleTickerProviderStateMixin {
+class _MyBookingsScreenState extends State<MyBookingsScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -39,7 +42,8 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> with SingleTickerPr
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.dangerColor),
+            style:
+                ElevatedButton.styleFrom(backgroundColor: AppTheme.dangerColor),
             child: const Text('Yes, Cancel'),
           ),
         ],
@@ -56,7 +60,9 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> with SingleTickerPr
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(response['message'] ?? 'Booking cancelled'),
-        backgroundColor: response['success'] == true ? AppTheme.successColor : AppTheme.dangerColor,
+        backgroundColor: response['success'] == true
+            ? AppTheme.successColor
+            : AppTheme.dangerColor,
       ),
     );
   }
@@ -71,6 +77,22 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> with SingleTickerPr
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/home');
+            }
+          },
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.home),
+            onPressed: () => context.go('/home'),
+          ),
+        ],
         title: const Text('My Bookings'),
         bottom: TabBar(
           controller: _tabController,
@@ -98,7 +120,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> with SingleTickerPr
     );
   }
 
-  Widget _buildBookingsList(List reservations, bool canCancel) {
+  Widget _buildBookingsList(List<Booking> reservations, bool canCancel) {
     if (reservations.isEmpty) {
       return const Center(
         child: Column(
@@ -120,7 +142,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> with SingleTickerPr
         itemBuilder: (context, index) {
           final reservation = reservations[index];
           final departureTime = reservation.departureTime ?? DateTime.now();
-          
+
           return Card(
             margin: const EdgeInsets.only(bottom: 16),
             child: Padding(
@@ -178,8 +200,8 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> with SingleTickerPr
                       Text(
                         '\$${reservation.totalPrice.toStringAsFixed(2)}',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: AppTheme.primaryColor,
-                        ),
+                              color: AppTheme.primaryColor,
+                            ),
                       ),
                     ],
                   ),
@@ -191,7 +213,8 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> with SingleTickerPr
                         onPressed: () => _cancelBooking(reservation.id),
                         icon: const Icon(Icons.cancel_outlined),
                         label: const Text('Cancel Booking'),
-                        style: OutlinedButton.styleFrom(foregroundColor: AppTheme.dangerColor),
+                        style: OutlinedButton.styleFrom(
+                            foregroundColor: AppTheme.dangerColor),
                       ),
                     ),
                   ],
@@ -242,4 +265,3 @@ class _StatusBadge extends StatelessWidget {
     );
   }
 }
-

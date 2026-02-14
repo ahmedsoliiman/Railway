@@ -1,47 +1,35 @@
-class User {
+class Passenger {
   final int id;
   final String fullName;
   final String email;
-  final String? phone;
-  final String role;
   final bool isVerified;
-  final DateTime createdAt;
+  final String role; // 'user' or 'admin'
 
-  User({
+  Passenger({
     required this.id,
     required this.fullName,
     required this.email,
-    this.phone,
-    required this.role,
     required this.isVerified,
-    required this.createdAt,
+    this.role = 'user',
   });
 
-  factory User.fromJson(Map<String, dynamic> json) {
-    return User(
-      id: json['id'] ?? 0,
-      fullName: json['fullName'] ?? json['full_name'] ?? '',
-      email: json['email'] ?? '',
-      phone: json['phone'],
+  factory Passenger.fromJson(Map<String, dynamic> json) {
+    return Passenger(
+      id: json['PassengerID'],
+      fullName: json['Full_Name'] ?? '',
+      email: json['Email'] ?? '',
+      isVerified: json['IsVerified'] == 1 || json['IsVerified'] == true,
       role: json['role'] ?? 'user',
-      isVerified: json['isVerified'] ?? json['is_verified'] ?? false,
-      createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'])
-          : (json['created_at'] != null
-              ? DateTime.parse(json['created_at'])
-              : DateTime.now()),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
-      'full_name': fullName,
-      'email': email,
-      'phone': phone,
+      'PassengerID': id,
+      'Full_Name': fullName,
+      'Email': email,
+      'IsVerified': isVerified,
       'role': role,
-      'is_verified': isVerified,
-      'created_at': createdAt.toIso8601String(),
     };
   }
 }

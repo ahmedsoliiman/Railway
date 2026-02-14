@@ -464,7 +464,7 @@ async function loadTrips() {
             const tbody = document.querySelector('#trips-table tbody');
             tbody.innerHTML = '';
 
-            data.data.trips.forEach((tour) => {
+            data.data.trips.forEach((trip) => {
                 const statusBadge = getStatusBadge(trip.status);
                 const row = `
                     <tr>
@@ -557,7 +557,7 @@ async function editTour(id) {
 
         if (data.success) {
             const trip = data.data.trips.find((t) => t.id === id);
-            if (tour) {
+            if (trip) {
                 document.getElementById('tour-modal-title').textContent = 'Edit Tour';
                 document.getElementById('tour-id').value = trip.id;
                 document.getElementById('tour-train').value = trip.train_id;
@@ -626,7 +626,7 @@ document.getElementById('tour-form')?.addEventListener('submit', async (e) => {
                 'Content-Type': 'application/json',
                 Authorization: `Bearer ${authToken}`,
             },
-            body: JSON.stringify(tourData),
+            body: JSON.stringify(tripData),
         });
 
         const data = await response.json();

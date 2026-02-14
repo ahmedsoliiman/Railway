@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import '../../config/theme.dart';
+import '../../providers/trip_provider.dart';
+import '../../providers/auth_provider.dart';
+
+import 'package:go_router/go_router.dart';
 
 class PaymentScreen extends StatefulWidget {
-  const PaymentScreen({super.key});
+  final Map<String, dynamic> args;
+  const PaymentScreen({super.key, required this.args});
 
   @override
   State<PaymentScreen> createState() => _PaymentScreenState();
@@ -16,6 +22,70 @@ class _PaymentScreenState extends State<PaymentScreen> {
   final _expiryDateController = TextEditingController();
   final _cvvController = TextEditingController();
   bool _isProcessing = false;
+  String _cardType = 'Unknown'; // 'Visa', 'MasterCard', 'Unknown'
+
+  @override
+  void initState() {
+    super.initState();
+    _cardNumberController.text = "4242 4242 4242 4242";
+    _cardholderNameController.text = "Sama Bay";
+    _expiryDateController.text = "12/28";
+    _cvvController.text = "123";
+    _cardType = 'Visa'; // Set initial state directly
+  }
+
+  void _detectCardType(String number) {
+    String cleanNumber = number.replaceAll(' ', '');
+    if (cleanNumber.startsWith('4')) {
+      if (_cardType != 'Visa') setState(() => _cardType = 'Visa');
+    } else if (cleanNumber.startsWith('5') || cleanNumber.startsWith('2')) {
+      // Master card range: 2221-2720 or 51-55. Simple check for 5 or 2.
+      if (_cardType != 'MasterCard') setState(() => _cardType = 'MasterCard');
+    } else {
+      if (_cardType != 'Unknown') setState(() => _cardType = 'Unknown');
+    }
+  }
+
+  Color _getCardColor() {
+    if (_cardType == 'Visa') return Colors.blue;
+    if (_cardType == 'MasterCard') return Colors.orange;
+    return Colors.grey;
+  }
+
+  Widget _buildCardIcon() {
+    if (_cardType == 'Visa') {
+      return Container(
+        key: const ValueKey('visa'),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+        decoration: BoxDecoration(
+          color: Colors.blue,
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: const Text('VISA',
+            style: TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.w900,
+                fontStyle: FontStyle.italic)),
+      );
+    } else if (_cardType == 'MasterCard') {
+      return Container(
+        key: const ValueKey('master'),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(colors: [Colors.orange, Colors.red]),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: const Text('MASTER',
+            style: TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.bold)),
+      );
+    }
+    return const Icon(Icons.credit_card,
+        key: ValueKey('unknown'), color: Colors.grey);
+  }
 
   @override
   void dispose() {
@@ -49,33 +119,94 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
     setState(() => _isProcessing = true);
 
-    // Get booking data from route arguments
-    final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
-    
-    // Simulate payment processing
-    await Future.delayed(const Duration(seconds: 2));
+    // Use booking data from widget arguments
+    final args = widget.args;
 
-    setState(() => _isProcessing = false);
+    final tripProvider = Provider.of<TripProvider>(context, listen: false);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final userEmail = authProvider.user?.email ?? '';
+    final totalAmount = (args['totalPrice'] ??
+        args['totalAmount'] ??
+        args['price'] ??
+        0.0) as double;
 
-    if (!mounted) return;
+    try {
+      // 1) Create booking (pending)
+      final createRes = await tripProvider.createBooking(
+        tripId: widget.args['tripId'],
+        passengerEmail: userEmail,
+        numberOfSeats: args['numberOfSeats'],
+        amount: totalAmount,
+        seatClass: (args['seatClass'] ?? '').toString(),
+      );
 
-    // Navigate to ticket screen with booking data
-    Navigator.pushReplacementNamed(
-      context,
-      '/ticket',
-      arguments: {
-        ...args,
-        'paymentMethod': 'Credit/Debit Card',
-        'cardLastFour': _cardNumberController.text.replaceAll(' ', '').substring(12),
-      },
-    );
+      if (createRes['success'] != true) {
+        throw Exception(createRes['message'] ?? 'Failed to create booking');
+      }
+
+      final dynamic bookingData = createRes['data'];
+      final bookingId = bookingData is Map<String, dynamic>
+          ? (bookingData['Booking_ID'] ?? bookingData['id'])
+          : null;
+
+      print('✅ Booking Created! ID: $bookingId');
+
+      if (bookingId == null) {
+        print('❌ Booking data dump: $bookingData');
+        throw Exception('Booking created but missing Booking_ID');
+      }
+
+      // 2) Process payment (confirms booking)
+      final cardDigits = _cardNumberController.text.replaceAll(' ', '');
+      final paymentRes = await tripProvider.processPayment(
+        bookingId: bookingId,
+        paymentMethod: 'credit_card',
+        cardNumber: cardDigits,
+        cardHolder: _cardholderNameController.text.trim(),
+        expiryDate: _expiryDateController.text.trim(),
+        cvv: _cvvController.text.trim(),
+      );
+
+      if (paymentRes['success'] != true) {
+        throw Exception(paymentRes['message'] ?? 'Payment failed');
+      }
+
+      final booking = (paymentRes['data']?['booking'] ??
+          paymentRes['data']?['reservation'] ??
+          bookingData) as dynamic;
+
+      if (!mounted) return;
+      setState(() => _isProcessing = false);
+
+      // Navigate to ticket screen with confirmed booking data using GoRouter
+      context.pushReplacement(
+        '/ticket',
+        extra: {
+          ...args,
+          'paymentMethod': 'Credit/Debit Card',
+          'cardLastFour': cardDigits.length >= 4
+              ? cardDigits.substring(cardDigits.length - 4)
+              : cardDigits,
+          'booking': booking,
+        },
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isProcessing = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: AppTheme.dangerColor,
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
-    final totalPrice = args?['totalPrice'] ?? 0.0;
-    final trip = args?['trip'];
+    final args = widget.args;
+    final totalPrice = (args['totalPrice'] ?? 0.0) as double;
+    final trip = args['trip'];
 
     return Scaffold(
       appBar: AppBar(
@@ -108,7 +239,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
                             const Text('Route:'),
                             Text(
                               '${trip['origin']} → ${trip['destination']}',
-                              style: const TextStyle(fontWeight: FontWeight.bold),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold),
                             ),
                           ],
                         ),
@@ -125,7 +257,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             const Text('Class:'),
-                            Text(args!['seatClass'] ?? 'N/A'),
+                            Text(args['seatClass'] ?? 'N/A'),
                           ],
                         ),
                         const SizedBox(height: 8),
@@ -147,9 +279,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
                           ),
                           Text(
                             '\$${totalPrice.toStringAsFixed(2)}',
-                            style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                              color: AppTheme.primaryColor,
-                            ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .displaySmall
+                                ?.copyWith(
+                                  color: AppTheme.primaryColor,
+                                ),
                           ),
                         ],
                       ),
@@ -160,46 +295,167 @@ class _PaymentScreenState extends State<PaymentScreen> {
               const SizedBox(height: 32),
 
               // Payment Method Header
-              Row(
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                runSpacing: 8,
                 children: [
-                  const Icon(Icons.credit_card, color: AppTheme.primaryColor),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Credit / Debit Card',
-                    style: Theme.of(context).textTheme.headlineSmall,
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.credit_card,
+                          color: AppTheme.primaryColor),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Credit / Debit Card',
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleLarge
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Preset 1: Sama (Visa)
+                      InkWell(
+                        onTap: () {
+                          setState(() {
+                            _cardNumberController.text = "4242 4242 4242 4242";
+                            _cardholderNameController.text = "Sama Bay";
+                            _expiryDateController.text = "12/28";
+                            _cvvController.text = "123";
+                            _detectCardType(_cardNumberController.text);
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border:
+                                Border.all(color: Colors.blue.withOpacity(0.3)),
+                          ),
+                          child: const Text('Sama (Visa)',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.blue,
+                                  fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Preset 2: Mohamed (Master)
+                      InkWell(
+                        onTap: () {
+                          setState(() {
+                            _cardNumberController.text = "5555 5555 5555 5555";
+                            _cardholderNameController.text = "Mohamed Reda";
+                            _expiryDateController.text = "11/27";
+                            _cvvController.text = "456";
+                            _detectCardType(_cardNumberController.text);
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                                color: Colors.orange.withOpacity(0.3)),
+                          ),
+                          child: const Text('Mohamed (Master)',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.orange,
+                                  fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 12),
+
+              // Helper info (Modified to dynamic)
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: _getCardColor().withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: _getCardColor().withOpacity(0.2)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, size: 20, color: _getCardColor()),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        _cardType == 'Visa'
+                            ? 'Visa Card Detected • Sama Bay'
+                            : (_cardType == 'MasterCard'
+                                ? 'MasterCard Detected • Mohamed Reda'
+                                : 'Enter card details'),
+                        style: TextStyle(
+                            fontSize: 13,
+                            color: _getCardColor(),
+                            fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 32),
 
               // Card Number
               TextFormField(
                 controller: _cardNumberController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Card Number',
-                  hintText: '1234 5678 9012 3456',
-                  prefixIcon: Icon(Icons.credit_card),
-                  border: OutlineInputBorder(),
+                  hintText: '0000 0000 0000 0000',
+                  prefixIcon: const Icon(Icons.credit_card),
+                  suffixIcon: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      transitionBuilder:
+                          (Widget child, Animation<double> animation) {
+                        return ScaleTransition(scale: animation, child: child);
+                      },
+                      child: _buildCardIcon(),
+                    ),
+                  ),
+                  border: const OutlineInputBorder(),
                 ),
                 keyboardType: TextInputType.number,
                 inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(16),
+                  FilteringTextInputFormatter.allow(RegExp(r'[0-9 ]')),
+                  LengthLimitingTextInputFormatter(19),
                 ],
                 onChanged: (value) {
+                  _detectCardType(value);
                   final formatted = _formatCardNumber(value);
-                  _cardNumberController.value = TextEditingValue(
-                    text: formatted,
-                    selection: TextSelection.collapsed(offset: formatted.length),
-                  );
+                  if (formatted != value) {
+                    _cardNumberController.value = TextEditingValue(
+                      text: formatted,
+                      selection:
+                          TextSelection.collapsed(offset: formatted.length),
+                    );
+                  }
                 },
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please enter card number';
                   }
                   final digits = value.replaceAll(' ', '');
-                  if (digits.length != 16) {
-                    return 'Card number must be 16 digits';
+                  if (digits.length < 13 || digits.length > 19) {
+                    return 'Invalid card number';
                   }
                   return null;
                 },
@@ -252,7 +508,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
                         final formatted = _formatExpiryDate(value);
                         _expiryDateController.value = TextEditingValue(
                           text: formatted,
-                          selection: TextSelection.collapsed(offset: formatted.length),
+                          selection:
+                              TextSelection.collapsed(offset: formatted.length),
                         );
                       },
                       validator: (value) {
@@ -308,7 +565,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 decoration: BoxDecoration(
                   color: AppTheme.successColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppTheme.successColor.withOpacity(0.3)),
+                  border:
+                      Border.all(color: AppTheme.successColor.withOpacity(0.3)),
                 ),
                 child: Row(
                   children: [
@@ -349,7 +607,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   )
                 : Text(
                     'Pay \$${totalPrice.toStringAsFixed(2)}',
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.bold),
                   ),
           ),
         ),
@@ -357,4 +616,3 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 }
-

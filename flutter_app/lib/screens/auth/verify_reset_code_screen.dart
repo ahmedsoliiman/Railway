@@ -3,24 +3,25 @@ import 'package:flutter/services.dart';
 import '../../config/theme.dart';
 import '../../services/api_service.dart';
 
+import 'package:go_router/go_router.dart';
+
 class VerifyResetCodeScreen extends StatefulWidget {
-  const VerifyResetCodeScreen({super.key});
+  final String email;
+  const VerifyResetCodeScreen({super.key, required this.email});
 
   @override
   State<VerifyResetCodeScreen> createState() => _VerifyResetCodeScreenState();
 }
 
 class _VerifyResetCodeScreenState extends State<VerifyResetCodeScreen> {
-  final List<TextEditingController> _controllers = List.generate(6, (_) => TextEditingController());
+  final List<TextEditingController> _controllers =
+      List.generate(6, (_) => TextEditingController());
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
   bool _isLoading = false;
-  String? _email;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Get email from route arguments
-    _email = ModalRoute.of(context)?.settings.arguments as String?;
+  void initState() {
+    super.initState();
   }
 
   @override
@@ -40,7 +41,7 @@ class _VerifyResetCodeScreenState extends State<VerifyResetCodeScreen> {
 
   Future<void> _verifyCode() async {
     final code = _getCode();
-    
+
     if (code.length != 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter complete code')),
@@ -48,11 +49,10 @@ class _VerifyResetCodeScreenState extends State<VerifyResetCodeScreen> {
       return;
     }
 
-    if (_email == null) {
+    if (widget.email.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Email not found. Please try again')),
       );
-      Navigator.pop(context);
       return;
     }
 
@@ -60,16 +60,15 @@ class _VerifyResetCodeScreenState extends State<VerifyResetCodeScreen> {
 
     try {
       final apiService = ApiService();
-      final response = await apiService.verifyResetCode(_email!, code);
+      final response = await apiService.verifyResetCode(widget.email, code);
 
       if (!mounted) return;
 
       if (response['success']) {
         // Navigate to reset password screen
-        Navigator.pushReplacementNamed(
-          context,
+        context.pushReplacement(
           '/reset-password',
-          arguments: {'email': _email, 'code': code},
+          extra: {'email': widget.email, 'code': code},
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -89,11 +88,11 @@ class _VerifyResetCodeScreenState extends State<VerifyResetCodeScreen> {
   }
 
   Future<void> _resendCode() async {
-    if (_email == null) return;
+    if (widget.email.isEmpty) return;
 
     try {
       final apiService = ApiService();
-      final response = await apiService.forgotPassword(_email!);
+      final response = await apiService.forgotPassword(widget.email);
 
       if (!mounted) return;
 
@@ -104,7 +103,7 @@ class _VerifyResetCodeScreenState extends State<VerifyResetCodeScreen> {
             backgroundColor: Colors.green,
           ),
         );
-        
+
         // Clear existing code
         for (var controller in _controllers) {
           controller.clear();
@@ -112,7 +111,8 @@ class _VerifyResetCodeScreenState extends State<VerifyResetCodeScreen> {
         _focusNodes[0].requestFocus();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(response['message'] ?? 'Failed to resend code')),
+          SnackBar(
+              content: Text(response['message'] ?? 'Failed to resend code')),
         );
       }
     } catch (e) {
@@ -163,14 +163,14 @@ class _VerifyResetCodeScreenState extends State<VerifyResetCodeScreen> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'We sent a 6-digit code to\n${_email ?? 'your email'}',
+                  'We sent a 6-digit code to\n${widget.email}',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: AppTheme.grayColor,
                       ),
                 ),
                 const SizedBox(height: 40),
-                
+
                 // Code Input
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -184,7 +184,8 @@ class _VerifyResetCodeScreenState extends State<VerifyResetCodeScreen> {
                         textAlign: TextAlign.center,
                         keyboardType: TextInputType.number,
                         maxLength: 1,
-                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                            fontSize: 24, fontWeight: FontWeight.bold),
                         decoration: InputDecoration(
                           counterText: '',
                           border: OutlineInputBorder(
@@ -196,7 +197,8 @@ class _VerifyResetCodeScreenState extends State<VerifyResetCodeScreen> {
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: AppTheme.primaryColor, width: 2),
+                            borderSide: const BorderSide(
+                                color: AppTheme.primaryColor, width: 2),
                           ),
                         ),
                         inputFormatters: [
@@ -208,7 +210,7 @@ class _VerifyResetCodeScreenState extends State<VerifyResetCodeScreen> {
                           } else if (value.isEmpty && index > 0) {
                             _focusNodes[index - 1].requestFocus();
                           }
-                          
+
                           // Auto-verify when all digits are entered
                           if (index == 5 && value.isNotEmpty) {
                             _verifyCode();
@@ -218,9 +220,9 @@ class _VerifyResetCodeScreenState extends State<VerifyResetCodeScreen> {
                     );
                   }),
                 ),
-                
+
                 const SizedBox(height: 32),
-                
+
                 // Verify Button
                 SizedBox(
                   width: double.infinity,
@@ -233,15 +235,16 @@ class _VerifyResetCodeScreenState extends State<VerifyResetCodeScreen> {
                             width: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(Colors.white),
                             ),
                           )
                         : const Text('Verify Code'),
                   ),
                 ),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // Resend Code
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -264,4 +267,3 @@ class _VerifyResetCodeScreenState extends State<VerifyResetCodeScreen> {
     );
   }
 }
-

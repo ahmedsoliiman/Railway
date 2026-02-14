@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../config/theme.dart';
 import '../../providers/auth_provider.dart';
 
@@ -32,7 +33,7 @@ class _SignupScreenState extends State<SignupScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    
+
     final response = await authProvider.signup(
       fullName: _fullNameController.text.trim(),
       email: _emailController.text.trim(),
@@ -44,11 +45,12 @@ class _SignupScreenState extends State<SignupScreen> {
     if (response['success'] == true) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Signup successful! Please check your email for verification code.'),
+          content: Text(
+              'Signup successful! Please check your email for verification code.'),
           backgroundColor: AppTheme.successColor,
         ),
       );
-      Navigator.pushReplacementNamed(context, '/verification');
+      context.go('/verification');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -89,8 +91,8 @@ class _SignupScreenState extends State<SignupScreen> {
                     'Join us to book your train tickets',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppTheme.grayColor,
-                    ),
+                          color: AppTheme.grayColor,
+                        ),
                   ),
                   const SizedBox(height: 48),
 
@@ -125,7 +127,8 @@ class _SignupScreenState extends State<SignupScreen> {
                       if (value == null || value.trim().isEmpty) {
                         return 'Please enter your email';
                       }
-                      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                          .hasMatch(value)) {
                         return 'Please enter a valid email';
                       }
                       return null;
@@ -142,9 +145,12 @@ class _SignupScreenState extends State<SignupScreen> {
                       prefixIcon: const Icon(Icons.lock_outline),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                          _obscurePassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
                         ),
-                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                        onPressed: () => setState(
+                            () => _obscurePassword = !_obscurePassword),
                       ),
                     ),
                     validator: (value) {
@@ -177,9 +183,12 @@ class _SignupScreenState extends State<SignupScreen> {
                       prefixIcon: const Icon(Icons.lock_outline),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
+                          _obscureConfirmPassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
                         ),
-                        onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                        onPressed: () => setState(() =>
+                            _obscureConfirmPassword = !_obscureConfirmPassword),
                       ),
                     ),
                     validator: (value) {
@@ -198,14 +207,16 @@ class _SignupScreenState extends State<SignupScreen> {
                   Consumer<AuthProvider>(
                     builder: (context, authProvider, child) {
                       return ElevatedButton(
-                        onPressed: authProvider.isLoading ? null : _handleSignup,
+                        onPressed:
+                            authProvider.isLoading ? null : _handleSignup,
                         child: authProvider.isLoading
                             ? const SizedBox(
                                 height: 20,
                                 width: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white),
                                 ),
                               )
                             : const Text('Sign Up'),
@@ -225,7 +236,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                         TextButton(
-                          onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
+                          onPressed: () => context.go('/login'),
                           child: const Text('Login'),
                         ),
                       ],
@@ -240,4 +251,3 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 }
-

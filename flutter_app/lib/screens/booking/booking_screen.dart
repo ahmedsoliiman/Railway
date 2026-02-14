@@ -3,22 +3,24 @@ import 'package:provider/provider.dart';
 import '../../config/theme.dart';
 import '../../providers/trip_provider.dart';
 
+import 'package:go_router/go_router.dart';
+
 class BookingScreen extends StatefulWidget {
-  const BookingScreen({super.key});
+  final int tripId;
+  const BookingScreen({super.key, required this.tripId});
 
   @override
   State<BookingScreen> createState() => _BookingScreenState();
 }
 
 class _BookingScreenState extends State<BookingScreen> {
-  String _selectedClass = 'First';
+  String _selectedClass = 'first';
   int _numberOfSeats = 1;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final tripId = ModalRoute.of(context)!.settings.arguments as int;
-    _loadTripDetails(tripId);
+  void initState() {
+    super.initState();
+    _loadTripDetails(widget.tripId);
   }
 
   Future<void> _loadTripDetails(int tripId) async {
@@ -30,16 +32,17 @@ class _BookingScreenState extends State<BookingScreen> {
     final tripProvider = Provider.of<TripProvider>(context, listen: false);
     final trip = tripProvider.selectedTrip!;
 
-    final pricePerSeat = _selectedClass == 'First' 
-        ? (trip.firstClassPrice ?? 0) 
-        : (trip.secondClassPrice ?? 0);
+    final pricePerSeat = _selectedClass == 'first'
+        ? (trip.firstClassPrice ?? 0)
+        : _selectedClass == 'second'
+            ? (trip.secondClassPrice ?? 0)
+            : (trip.economicPrice ?? 0);
     final totalPrice = pricePerSeat * _numberOfSeats;
 
-    // Navigate to payment screen
-    Navigator.pushNamed(
-      context,
+    // Navigate to payment screen using GoRouter
+    context.push(
       '/payment',
-      arguments: {
+      extra: {
         'tripId': trip.id,
         'seatClass': _selectedClass,
         'numberOfSeats': _numberOfSeats,
@@ -78,9 +81,11 @@ class _BookingScreenState extends State<BookingScreen> {
             return const Center(child: Text('Trip not found'));
           }
 
-          final pricePerSeat = _selectedClass == 'First' 
-              ? (trip.firstClassPrice ?? 0) 
-              : (trip.secondClassPrice ?? 0);
+          final pricePerSeat = _selectedClass == 'first'
+              ? (trip.firstClassPrice ?? 0)
+              : _selectedClass == 'second'
+                  ? (trip.secondClassPrice ?? 0)
+                  : (trip.economicPrice ?? 0);
           final totalPrice = pricePerSeat * _numberOfSeats;
 
           return SingleChildScrollView(
@@ -102,7 +107,6 @@ class _BookingScreenState extends State<BookingScreen> {
                         const SizedBox(height: 8),
                         Text(
                           '${trip.originName} → ${trip.destinationName}',
-                          style: Theme.of(context).textTheme.bodyMedium,
                         ),
                       ],
                     ),
@@ -116,43 +120,50 @@ class _BookingScreenState extends State<BookingScreen> {
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 16),
-                if (trip.firstClassPrice != null && trip.firstClassPrice! > 0)
+                if (trip.firstClassPrice > 0)
                   RadioListTile<String>(
-                    value: 'First',
+                    value: 'first',
                     groupValue: _selectedClass,
-                    onChanged: (value) => setState(() => _selectedClass = value!),
+                    onChanged: (value) =>
+                        setState(() => _selectedClass = value!),
                     title: const Text('First Class'),
-                    subtitle: Text('\$${trip.firstClassPrice!.toStringAsFixed(2)} per seat'),
+                    subtitle: Text(
+                        '\$${trip.firstClassPrice.toStringAsFixed(2)} per seat'),
                     secondary: const Icon(Icons.airline_seat_recline_extra),
                   ),
-                if (trip.secondClassPrice != null && trip.secondClassPrice! > 0)
+                if (trip.secondClassPrice > 0)
                   RadioListTile<String>(
-                    value: 'Second',
+                    value: 'second',
                     groupValue: _selectedClass,
-                    onChanged: (value) => setState(() => _selectedClass = value!),
+                    onChanged: (value) =>
+                        setState(() => _selectedClass = value!),
                     title: const Text('Second Class'),
-                    subtitle: Text('\$${trip.secondClassPrice!.toStringAsFixed(2)} per seat'),
+                    subtitle: Text(
+                        '\$${trip.secondClassPrice.toStringAsFixed(2)} per seat'),
                     secondary: const Icon(Icons.event_seat),
                   ),
-                if (trip.economicPrice != null && trip.economicPrice! > 0)
+                if (trip.economicPrice > 0)
                   RadioListTile<String>(
-                    value: 'Economic',
+                    value: 'economic',
                     groupValue: _selectedClass,
-                    onChanged: (value) => setState(() => _selectedClass = value!),
+                    onChanged: (value) =>
+                        setState(() => _selectedClass = value!),
                     title: const Text('Economic Class'),
-                    subtitle: Text('\$${trip.economicPrice!.toStringAsFixed(2)} per seat'),
+                    subtitle: Text(
+                        '\$${trip.economicPrice.toStringAsFixed(2)} per seat'),
                     secondary: const Icon(Icons.airline_seat_recline_normal),
                   ),
-                if ((trip.firstClassPrice == null || trip.firstClassPrice! <= 0) &&
-                    (trip.secondClassPrice == null || trip.secondClassPrice! <= 0) &&
-                    (trip.economicPrice == null || trip.economicPrice! <= 0))
+                if (trip.firstClassPrice <= 0 &&
+                    trip.secondClassPrice <= 0 &&
+                    trip.economicPrice <= 0)
                   Card(
                     color: AppTheme.warningColor.withOpacity(0.1),
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Row(
                         children: [
-                          Icon(Icons.warning_amber, color: AppTheme.warningColor),
+                          Icon(Icons.warning_amber,
+                              color: AppTheme.warningColor),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
@@ -246,9 +257,12 @@ class _BookingScreenState extends State<BookingScreen> {
                             ),
                             Text(
                               '\$${totalPrice.toStringAsFixed(2)}',
-                              style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                                color: AppTheme.primaryColor,
-                              ),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .displaySmall
+                                  ?.copyWith(
+                                    color: AppTheme.primaryColor,
+                                  ),
                             ),
                           ],
                         ),
@@ -267,16 +281,18 @@ class _BookingScreenState extends State<BookingScreen> {
           if (trip == null) return const SizedBox.shrink();
 
           // Check if any seat class is available with valid pricing
-          final bool hasAvailableClasses = (trip.firstClassPrice != null && trip.firstClassPrice! > 0) ||
-              (trip.secondClassPrice != null && trip.secondClassPrice! > 0) ||
-              (trip.economicPrice != null && trip.economicPrice! > 0);
+          final bool hasAvailableClasses = trip.firstClassPrice > 0 ||
+              trip.secondClassPrice > 0 ||
+              trip.economicPrice > 0;
 
           return SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: ElevatedButton(
                 onPressed: hasAvailableClasses ? _handleBooking : null,
-                child: Text(hasAvailableClasses ? 'Continue to Payment' : 'No Classes Available'),
+                child: Text(hasAvailableClasses
+                    ? 'Continue to Payment'
+                    : 'No Classes Available'),
               ),
             ),
           );
@@ -285,4 +301,3 @@ class _BookingScreenState extends State<BookingScreen> {
     );
   }
 }
-

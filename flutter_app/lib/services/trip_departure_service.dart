@@ -1,10 +1,11 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/app_config.dart';
 import 'storage_service.dart';
 
 class TripDepartureService {
   final StorageService _storageService = StorageService();
+  SupabaseClient get _supabase => Supabase.instance.client;
 
   Future<Map<String, String>> _getHeaders() async {
     final token = await _storageService.getToken();
@@ -16,29 +17,19 @@ class TripDepartureService {
 
   Future<Map<String, dynamic>> getTripDepartures(int tripId) async {
     try {
-      final headers = await _getHeaders();
-      final response = await http.get(
-        Uri.parse('${AppConfig.baseUrl}/admin/trips/$tripId/departures'),
-        headers: headers,
-      );
+      final List<dynamic> response = await _supabase
+          .from('trip_departures')
+          .select()
+          .eq('trip_id', tripId);
 
-      final data = json.decode(response.body);
-      
-      if (response.statusCode == 200 && data['success']) {
-        return {
-          'success': true,
-          'data': data['data'],
-        };
-      } else {
-        return {
-          'success': false,
-          'message': data['message'] ?? 'Failed to fetch departures',
-        };
-      }
+      return {
+        'success': true,
+        'data': response,
+      };
     } catch (e) {
       return {
         'success': false,
-        'message': 'Network error: ${e.toString()}',
+        'message': 'Error: ${e.toString()}',
       };
     }
   }
@@ -50,28 +41,21 @@ class TripDepartureService {
     required int availableSeats,
   }) async {
     try {
-      final headers = await _getHeaders();
-      final response = await http.post(
-        Uri.parse('${AppConfig.baseUrl}/admin/trip-departures'),
-        headers: headers,
-        body: json.encode({
-          'tripId': tripId,
-          'departureTime': departureTime.toIso8601String(),
-          'arrivalTime': arrivalTime.toIso8601String(),
-          'availableSeats': availableSeats,
-        }),
-      );
+      final response = await _supabase.from('trip_departures').insert({
+        'trip_id': tripId,
+        'departure_time': departureTime.toIso8601String(),
+        'arrival_time': arrivalTime.toIso8601String(),
+        'available_seats': availableSeats,
+      }).select().single();
 
-      final data = json.decode(response.body);
-      
       return {
-        'success': response.statusCode == 201 && data['success'],
-        'message': data['message'] ?? (response.statusCode == 201 ? 'Created successfully' : 'Failed'),
+        'success': true,
+        'message': 'Created successfully',
       };
     } catch (e) {
       return {
         'success': false,
-        'message': 'Network error: ${e.toString()}',
+        'message': 'Error: ${e.toString()}',
       };
     }
   }
@@ -83,50 +67,37 @@ class TripDepartureService {
     required int availableSeats,
   }) async {
     try {
-      final headers = await _getHeaders();
-      final response = await http.put(
-        Uri.parse('${AppConfig.baseUrl}/admin/trip-departures/$id'),
-        headers: headers,
-        body: json.encode({
-          'departureTime': departureTime.toIso8601String(),
-          'arrivalTime': arrivalTime.toIso8601String(),
-          'availableSeats': availableSeats,
-        }),
-      );
+      final response = await _supabase.from('trip_departures').update({
+        'departure_time': departureTime.toIso8601String(),
+        'arrival_time': arrivalTime.toIso8601String(),
+        'available_seats': availableSeats,
+      }).eq('id', id).select().single();
 
-      final data = json.decode(response.body);
-      
       return {
-        'success': response.statusCode == 200 && data['success'],
-        'message': data['message'] ?? (response.statusCode == 200 ? 'Updated successfully' : 'Failed'),
+        'success': true,
+        'message': 'Updated successfully',
       };
     } catch (e) {
       return {
         'success': false,
-        'message': 'Network error: ${e.toString()}',
+        'message': 'Error: ${e.toString()}',
       };
     }
   }
 
   Future<Map<String, dynamic>> deleteTripDeparture(int id) async {
     try {
-      final headers = await _getHeaders();
-      final response = await http.delete(
-        Uri.parse('${AppConfig.baseUrl}/admin/trip-departures/$id'),
-        headers: headers,
-      );
-
-      final data = json.decode(response.body);
-      
+      await _supabase.from('trip_departures').delete().eq('id', id);
       return {
-        'success': response.statusCode == 200 && data['success'],
-        'message': data['message'] ?? (response.statusCode == 200 ? 'Deleted successfully' : 'Failed'),
+        'success': true,
+        'message': 'Deleted successfully',
       };
     } catch (e) {
       return {
         'success': false,
-        'message': 'Network error: ${e.toString()}',
+        'message': 'Error: ${e.toString()}',
       };
     }
   }
 }
+

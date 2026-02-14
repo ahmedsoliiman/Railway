@@ -1,113 +1,79 @@
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
 import '../../config/theme.dart';
-import '../../providers/trip_provider.dart';
+import '../../services/pdf_ticket_service.dart';
+import 'package:go_router/go_router.dart';
 
 class TicketScreen extends StatefulWidget {
-  const TicketScreen({super.key});
+  final Map<String, dynamic> args;
+  const TicketScreen({super.key, required this.args});
 
   @override
   State<TicketScreen> createState() => _TicketScreenState();
 }
 
 class _TicketScreenState extends State<TicketScreen> {
-  bool _isBooking = true;
-  String? _bookingReference;
-  Map<String, dynamic>? _reservationData;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_isBooking) {
-      _createBooking();
-    }
-  }
-
-  Future<void> _createBooking() async {
-    final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
-    final tripProvider = Provider.of<TripProvider>(context, listen: false);
-
-    final response = await tripProvider.createBooking(
-      tripId: args['tripId'],
-      seatClass: args['seatClass'].toString().toLowerCase(),
-      numberOfSeats: args['numberOfSeats'],
-    );
-
-    setState(() {
-      _isBooking = false;
-      if (response['success'] == true) {
-        _bookingReference = response['data']['reservation']['booking_reference'] ??
-            response['data']['booking_reference'] ??
-            'BK${DateTime.now().millisecondsSinceEpoch}';
-        _reservationData = response['data'];
-      }
-    });
-  }
-
-  String _generateQRData() {
-    if (_bookingReference == null) return '';
-    
-    final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
-    final trip = args['trip'];
-    
+  final PdfTicketService _pdfService = PdfTicketService();
+  bool _isGeneratingPdf = false;
+  String _generateQRData({
+    required String bookingReference,
+    required Map<String, dynamic> args,
+  }) {
     return '''
-Booking Reference: $_bookingReference
-Train: ${trip['trainName']}
-From: ${trip['origin']}
-To: ${trip['destination']}
-Departure: ${DateFormat('yyyy-MM-dd HH:mm').format(DateTime.parse(trip['departureTime']))}
-Class: ${args['seatClass']}
-Seats: ${args['numberOfSeats']}
+Booking Reference: $bookingReference
+Seats: ${args['numberOfSeats'] ?? '1'}
 ''';
   }
 
   @override
   Widget build(BuildContext context) {
-    final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
+    final args = widget.args;
 
-    if (_isBooking) {
-      return Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 24),
-              Text(
-                'Processing your booking...',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-            ],
-          ),
-        ),
-      );
+    print('🎫 TicketScreen Debug: Received args: ${args.keys.toList()}');
+
+    final booking = args['booking'];
+    final trip = args['trip'] ?? {};
+
+    // Support multiple naming conventions for the booking reference
+    String bookingReference =
+        'REF-GEN-${DateTime.now().millisecondsSinceEpoch}';
+    if (booking is Map<String, dynamic>) {
+      bookingReference = (booking['booking_reference'] ??
+              booking['bookingReference'] ??
+              booking['Booking_ID'] ??
+              booking['id'] ??
+              bookingReference)
+          .toString();
+      if (!bookingReference.startsWith('REF'))
+        bookingReference = 'REF-$bookingReference';
+    } else if (args['tripId'] != null) {
+      bookingReference = 'REF-${args['tripId']}';
     }
 
-    if (_bookingReference == null || args == null) {
-      return Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 64, color: AppTheme.dangerColor),
-              const SizedBox(height: 16),
-              const Text('Booking failed. Please try again.'),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () => Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false),
-                child: const Text('Go to Home'),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
+    print('🎫 Booking Reference resolved: $bookingReference');
 
-    final trip = args['trip'];
-    final departureTime = DateTime.parse(trip['departureTime']);
-    final arrivalTime = DateTime.parse(trip['arrivalTime']);
+    // Safe extraction of trip details
+    final trainName =
+        trip['trainName'] ?? trip['trainNumber'] ?? 'Express Train';
+    final origin = trip['origin'] ?? 'Origin Station';
+    final destination = trip['destination'] ?? 'Destination Station';
+
+    DateTime? departure;
+    try {
+      departure = DateTime.tryParse(trip['departureTime']?.toString() ?? '');
+    } catch (_) {}
+    departure ??= DateTime.now();
+
+    DateTime? arrival;
+    try {
+      arrival = DateTime.tryParse(trip['arrivalTime']?.toString() ?? '');
+    } catch (_) {}
+    arrival ??= departure.add(const Duration(hours: 2));
+
+    final seatClass = args['seatClass']?.toString() ?? 'Standard';
+    final seats = args['numberOfSeats']?.toString() ?? '1';
+    final price = (args['totalPrice'] ?? args['price'] ?? 0.0).toDouble();
 
     return Scaffold(
       appBar: AppBar(
@@ -133,9 +99,9 @@ Seats: ${args['numberOfSeats']}
                   Text(
                     'Booking Confirmed!',
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      color: AppTheme.successColor,
-                      fontWeight: FontWeight.bold,
-                    ),
+                          color: AppTheme.successColor,
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                   const SizedBox(height: 8),
                   const Text('Your ticket has been sent to your email'),
@@ -166,7 +132,7 @@ Seats: ${args['numberOfSeats']}
                       child: Column(
                         children: [
                           Text(
-                            trip['trainName'],
+                            trainName,
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 24,
@@ -175,7 +141,7 @@ Seats: ${args['numberOfSeats']}
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            trip['trainNumber'],
+                            trip['trainNumber'] ?? 'Unknown Train',
                             style: const TextStyle(
                               color: Colors.white70,
                               fontSize: 16,
@@ -194,12 +160,15 @@ Seats: ${args['numberOfSeats']}
                         children: [
                           const Icon(Icons.confirmation_number, size: 20),
                           const SizedBox(width: 8),
-                          Text(
-                            'Booking Ref: $_bookingReference',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1.2,
+                          Flexible(
+                            child: Text(
+                              'Booking Ref: $bookingReference',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.2,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
@@ -214,25 +183,27 @@ Seats: ${args['numberOfSeats']}
                           _TicketRow(
                             icon: Icons.location_on,
                             label: 'From',
-                            value: '${trip['origin']} (${trip['originCity']})',
+                            value: origin,
                           ),
                           const SizedBox(height: 16),
                           _TicketRow(
                             icon: Icons.flag,
                             label: 'To',
-                            value: '${trip['destination']} (${trip['destinationCity']})',
+                            value: destination,
                           ),
                           const Divider(height: 32),
                           _TicketRow(
                             icon: Icons.departure_board,
                             label: 'Departure',
-                            value: DateFormat('EEE, MMM d, y - HH:mm').format(departureTime),
+                            value: DateFormat('EEE, MMM d, y - HH:mm')
+                                .format(departure),
                           ),
                           const SizedBox(height: 16),
                           _TicketRow(
                             icon: Icons.location_on,
                             label: 'Arrival',
-                            value: DateFormat('EEE, MMM d, y - HH:mm').format(arrivalTime),
+                            value: DateFormat('EEE, MMM d, y - HH:mm')
+                                .format(arrival),
                           ),
                           const Divider(height: 32),
                           Row(
@@ -241,14 +212,14 @@ Seats: ${args['numberOfSeats']}
                                 child: _TicketRow(
                                   icon: Icons.airline_seat_recline_normal,
                                   label: 'Class',
-                                  value: args['seatClass'],
+                                  value: seatClass,
                                 ),
                               ),
                               Expanded(
                                 child: _TicketRow(
                                   icon: Icons.people,
                                   label: 'Seats',
-                                  value: '${args['numberOfSeats']}',
+                                  value: seats,
                                 ),
                               ),
                             ],
@@ -260,14 +231,14 @@ Seats: ${args['numberOfSeats']}
                                 child: _TicketRow(
                                   icon: Icons.train,
                                   label: 'Train Type',
-                                  value: trip['trainType'],
+                                  value: trip['trainType'] ?? 'Express',
                                 ),
                               ),
                               Expanded(
                                 child: _TicketRow(
                                   icon: Icons.payment,
                                   label: 'Total Paid',
-                                  value: '\$${args['totalPrice'].toStringAsFixed(2)}',
+                                  value: '\$${price.toStringAsFixed(2)}',
                                 ),
                               ),
                             ],
@@ -310,7 +281,10 @@ Seats: ${args['numberOfSeats']}
                               ],
                             ),
                             child: QrImageView(
-                              data: _generateQRData(),
+                              data: _generateQRData(
+                                bookingReference: bookingReference,
+                                args: args,
+                              ),
                               version: QrVersions.auto,
                               size: 200,
                               backgroundColor: Colors.white,
@@ -329,12 +303,75 @@ Seats: ${args['numberOfSeats']}
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
                 children: [
+                  // Download PDF Button
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.pushNamedAndRemoveUntil(context, '/my-bookings', (route) => false);
-                      },
+                      onPressed: _isGeneratingPdf
+                          ? null
+                          : () async {
+                              setState(() => _isGeneratingPdf = true);
+                              try {
+                                final pdfBytes =
+                                    await _pdfService.generateTicketPdf(
+                                  bookingReference: bookingReference,
+                                  bookingData: args,
+                                  tripData: trip,
+                                );
+
+                                await _pdfService.sharePdf(
+                                  pdfBytes,
+                                  'ticket_$bookingReference.pdf',
+                                );
+
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                          '✅ Ticket PDF generated successfully!'),
+                                      backgroundColor: AppTheme.successColor,
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content:
+                                          Text('❌ Error generating PDF: $e'),
+                                      backgroundColor: AppTheme.dangerColor,
+                                    ),
+                                  );
+                                }
+                              } finally {
+                                if (mounted) {
+                                  setState(() => _isGeneratingPdf = false);
+                                }
+                              }
+                            },
+                      icon: _isGeneratingPdf
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.download),
+                      label: Text(_isGeneratingPdf
+                          ? 'Generating PDF...'
+                          : 'Download Ticket PDF'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryColor,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => context.go('/my-bookings'),
                       icon: const Icon(Icons.list_alt),
                       label: const Text('View All Bookings'),
                     ),
@@ -343,9 +380,7 @@ Seats: ${args['numberOfSeats']}
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
-                      onPressed: () {
-                        Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
-                      },
+                      onPressed: () => context.go('/home'),
                       icon: const Icon(Icons.home),
                       label: const Text('Go to Home'),
                     ),
@@ -405,4 +440,3 @@ class _TicketRow extends StatelessWidget {
     );
   }
 }
-

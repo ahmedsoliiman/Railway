@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../config/theme.dart';
 import '../../providers/auth_provider.dart';
 
@@ -27,7 +28,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    
+
     final response = await authProvider.login(
       email: _emailController.text.trim(),
       password: _passwordController.text,
@@ -39,16 +40,18 @@ class _LoginScreenState extends State<LoginScreen> {
       // Route based on user role
       final userRole = response['userRole'] ?? 'user';
       if (userRole == 'admin') {
-        Navigator.pushReplacementNamed(context, '/admin');
+        context.go('/admin');
+      } else if (userRole == 'manager') {
+        context.go('/manager');
       } else {
-        Navigator.pushReplacementNamed(context, '/home');
+        context.go('/home');
       }
     } else {
       if (response['needsVerification'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Please verify your email first')),
         );
-        Navigator.pushNamed(context, '/verification');
+        context.push('/verification');
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(response['message'] ?? 'Login failed')),
@@ -89,7 +92,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                 ),
                 const SizedBox(height: 40),
-                
+
                 // Login Form
                 Form(
                   key: _formKey,
@@ -114,7 +117,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         },
                       ),
                       const SizedBox(height: 16),
-                      
+
                       // Password Field
                       TextFormField(
                         controller: _passwordController,
@@ -143,20 +146,20 @@ class _LoginScreenState extends State<LoginScreen> {
                         },
                       ),
                       const SizedBox(height: 8),
-                      
+
                       // Forgot Password
                       Align(
                         alignment: Alignment.centerRight,
                         child: TextButton(
                           onPressed: () {
-                            Navigator.pushNamed(context, '/forgot-password');
+                            context.push('/forgot-password');
                           },
                           child: const Text('Forgot Password?'),
                         ),
                       ),
-                      
+
                       const SizedBox(height: 16),
-                      
+
                       // Login Button
                       Consumer<AuthProvider>(
                         builder: (context, authProvider, child) {
@@ -171,7 +174,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                       width: 20,
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2,
-                                        valueColor: AlwaysStoppedAnimation<Color>(
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
                                           Colors.white,
                                         ),
                                       ),
@@ -184,9 +188,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     ],
                   ),
                 ),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // Sign Up Link
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -197,7 +201,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     TextButton(
                       onPressed: () {
-                        Navigator.pushNamed(context, '/signup');
+                        context.push('/signup');
                       },
                       child: const Text('Sign Up'),
                     ),
@@ -211,4 +215,3 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
-

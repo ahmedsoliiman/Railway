@@ -1,28 +1,60 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'config/theme.dart';
 import 'providers/auth_provider.dart';
 import 'providers/trip_provider.dart';
 import 'providers/admin_provider.dart';
-import 'screens/splash_screen.dart';
-import 'screens/auth/login_screen.dart';
-import 'screens/auth/signup_screen.dart';
-import 'screens/auth/verification_screen.dart';
-import 'screens/auth/forgot_password_screen.dart';
-import 'screens/auth/verify_reset_code_screen.dart';
-import 'screens/auth/reset_password_screen.dart';
-import 'screens/home/home_screen.dart';
-import 'screens/trips/trips_screen.dart';
-import 'screens/trips/trip_detail_screen.dart';
-import 'screens/booking/booking_screen.dart';
-import 'screens/booking/payment_screen.dart';
-import 'screens/booking/ticket_screen.dart';
-import 'screens/booking/my_bookings_screen.dart';
-import 'screens/profile/profile_screen.dart';
-import 'screens/admin/admin_dashboard_screen.dart';
+import 'providers/review_provider.dart';
+import 'routes/app_router.dart';
+import 'providers/manager_provider.dart';
+import 'services/notification_service.dart';
 
-void main() {
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'config/app_config.dart';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  try {
+    // Initialize Firebase (required for FCM)
+    await Firebase.initializeApp();
+    print('✅ Firebase initialized');
+  } catch (e) {
+    print('⚠️ Firebase initialization failed: $e');
+    // Continue - notifications will not work but app will still function
+  }
+
+  try {
+    await Supabase.initialize(
+      url: AppConfig.supabaseUrl,
+      anonKey: AppConfig.supabaseAnonKey,
+    );
+    print('✅ Supabase initialized');
+  } catch (e) {
+    print('Supabase initialization failed: $e');
+    // Continue running app to show UI, but services might fail
+  }
+
   runApp(const MyApp());
+
+  // Background pre-fetching and notification setup
+  _preFetchData();
+}
+
+Future<void> _preFetchData() async {
+  try {
+    // Initialize notification service in background
+    await NotificationService().initialize();
+
+    // We can't use Provider.of here because there's no context yet.
+    // However, the services themselves can start warming up or we can
+    // trigger static initializers if any.
+    // For now, the most effective way is to ensure Supabase is ready
+    // and maybe trigger an early fetch of stations which are used everywhere.
+  } catch (e) {
+    print('Pre-fetch failed: $e');
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -35,30 +67,14 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => TripProvider()),
         ChangeNotifierProvider(create: (_) => AdminProvider()),
+        ChangeNotifierProvider(create: (_) => ManagerProvider()),
+        ChangeNotifierProvider(create: (_) => ReviewProvider()),
       ],
-      child: MaterialApp(
-        title: 'Train Booking System',
+      child: MaterialApp.router(
+        title: 'Railway System',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
-        initialRoute: '/',
-        routes: {
-          '/': (context) => const SplashScreen(),
-          '/login': (context) => const LoginScreen(),
-          '/signup': (context) => const SignupScreen(),
-          '/verification': (context) => const VerificationScreen(),
-          '/forgot-password': (context) => const ForgotPasswordScreen(),
-          '/verify-reset-code': (context) => const VerifyResetCodeScreen(),
-          '/reset-password': (context) => const ResetPasswordScreen(),
-          '/home': (context) => const HomeScreen(),
-          '/trips': (context) => const TripsScreen(),
-          '/trip-detail': (context) => const TripDetailScreen(),
-          '/booking': (context) => const BookingScreen(),
-          '/payment': (context) => const PaymentScreen(),
-          '/ticket': (context) => const TicketScreen(),
-          '/my-bookings': (context) => const MyBookingsScreen(),
-          '/profile': (context) => const ProfileScreen(),
-          '/admin': (context) => const AdminDashboardScreen(),
-        },
+        routerConfig: AppRouter.router,
       ),
     );
   }

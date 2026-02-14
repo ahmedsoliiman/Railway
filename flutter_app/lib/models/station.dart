@@ -1,43 +1,34 @@
 class Station {
-  final int id;
+  final String code; // Primary Key
   final String name;
-  final String code;
   final String city;
   final String? address;
-  final double? latitude;
-  final double? longitude;
 
   Station({
-    required this.id,
-    required this.name,
     required this.code,
+    required this.name,
     required this.city,
     this.address,
-    this.latitude,
-    this.longitude,
   });
 
   factory Station.fromJson(Map<String, dynamic> json) {
     return Station(
-      id: json['id'],
-      name: json['name'],
-      code: json['code'],
-      city: json['city'],
-      address: json['address'],
-      latitude: json['latitude'] != null ? double.tryParse(json['latitude'].toString()) : null,
-      longitude: json['longitude'] != null ? double.tryParse(json['longitude'].toString()) : null,
+      code: json['code']?.toString() ?? '',
+      name: json['name']?.toString() ?? '',
+      city: json['city']?.toString() ?? '',
+      address: json['address']?.toString(),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
-      'name': name,
       'code': code,
+      'name': name,
       'city': city,
       'address': address,
-      'latitude': latitude,
-      'longitude': longitude,
     };
   }
+
+  // Getter for backward compatibility
+  String get id => code;
 }
