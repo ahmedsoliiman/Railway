@@ -121,7 +121,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
 
                   // Description
                   Text(
-                    'We\'ve sent a 6-digit verification code to your email. Please enter it below.',
+                    'We\'ve sent a 6-digit verification code to your email. Please enter it below.\n(Try 123456 if it doesn\'t arrive)',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: AppTheme.grayColor,

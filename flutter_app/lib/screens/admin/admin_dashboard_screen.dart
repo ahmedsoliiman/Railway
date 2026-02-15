@@ -908,18 +908,28 @@ class AdminTripsPage extends StatelessWidget {
                 final dt = DateTime(selectedDate.year, selectedDate.month,
                     selectedDate.day, selectedTime.hour, selectedTime.minute);
 
-                final response = await adminProvider.createTrip(
-                    trainId: selectedTrainId!,
-                    originStationId: selectedFrom,
-                    destinationStationId: selectedTo,
-                    departure: selectedDate, // Used for 'Date' column
-                    departureTime: dt, // Used for 'Time' column
-                    arrivalTime:
-                        dt.add(const Duration(hours: 3)), // Mock arrival
-                    firstClassPrice: 0,
-                    secondClassPrice: 0,
-                    economicPrice: double.parse(priceController.text),
-                    quantities: 100);
+                final response = trip == null
+                    ? await adminProvider.createTrip(
+                        trainId: selectedTrainId!,
+                        originStationId: selectedFrom,
+                        destinationStationId: selectedTo,
+                        departure: selectedDate, // Used for 'Date' column
+                        departureTime: dt, // Used for 'Time' column
+                        arrivalTime:
+                            dt.add(const Duration(hours: 3)), // Mock arrival
+                        firstClassPrice: 0,
+                        secondClassPrice: 0,
+                        economicPrice: double.parse(priceController.text),
+                        quantities: 100)
+                    : await adminProvider.updateTrip(
+                        id: trip.id,
+                        trainId: selectedTrainId!,
+                        from: selectedFrom!,
+                        to: selectedTo!,
+                        date: selectedDate,
+                        time: DateFormat('HH:mm:ss').format(dt),
+                        basePrice: double.parse(priceController.text),
+                      );
 
                 if (context.mounted) {
                   Navigator.pop(context);
@@ -987,11 +997,58 @@ class AdminTripsPage extends StatelessWidget {
                               '${trip.originCity ?? trip.originName} ➝ ${trip.destinationCity ?? trip.destinationName}'),
                           subtitle: Text(
                               '${trip.date} • ${trip.time} • ${trip.trainName} • \$${trip.basePrice}'),
-                          trailing: IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.red),
-                              onPressed: () {
-                                // Implement delete
-                              }),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon:
+                                    const Icon(Icons.edit, color: Colors.blue),
+                                onPressed: () =>
+                                    _showTripDialog(context, trip: trip),
+                              ),
+                              IconButton(
+                                icon:
+                                    const Icon(Icons.delete, color: Colors.red),
+                                onPressed: () async {
+                                  final confirm = await showDialog<bool>(
+                                    context: context,
+                                    builder: (context) => AlertDialog(
+                                      title: const Text('Delete Trip'),
+                                      content: const Text(
+                                          'Are you sure you want to delete this trip?'),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.pop(context, false),
+                                          child: const Text('Cancel'),
+                                        ),
+                                        ElevatedButton(
+                                          style: ElevatedButton.styleFrom(
+                                              backgroundColor: Colors.red),
+                                          onPressed: () =>
+                                              Navigator.pop(context, true),
+                                          child: const Text('Delete'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+
+                                  if (confirm == true && context.mounted) {
+                                    final response =
+                                        await adminProvider.deleteTrip(trip.id);
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                            content: Text(response['message'] ??
+                                                'Deleted')),
+                                      );
+                                    }
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
                         ),
                       );
                     },

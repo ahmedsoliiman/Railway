@@ -43,6 +43,11 @@ class Booking {
     final Map<String, dynamic>? train =
         trainData is Map<String, dynamic> ? trainData : null;
 
+    // Handle both old (station_from/station_to) and new (origin_station/destination_station) formats
+    final originStation = trip?['origin_station'] ?? trip?['station_from'];
+    final destinationStation =
+        trip?['destination_station'] ?? trip?['station_to'];
+
     return Booking(
       bookingId: json['Booking_ID'] ?? 0,
       passengerId: json['PassengerID'] ?? 0,
@@ -50,17 +55,17 @@ class Booking {
       numberOfSeats: json['numberOfSeats'] ?? 1,
       amount: (json['Amount'] as num?)?.toDouble() ?? 0.0,
       instanceId: json['instance_ID'] ?? json['Instance_ID'],
-      status: json['Status'] ?? 'confirmed',
+      status: json['status'] ?? json['Status'] ?? 'confirmed',
       trainName: train != null ? train['Train_Name'] : null,
-      fromCity: trip != null && trip['station_from'] != null
-          ? (trip['station_from'] is List
-              ? trip['station_from'].first['city']
-              : (trip['station_from']['city'] ?? trip['station_from']['City']))
+      fromCity: originStation != null
+          ? (originStation is List
+              ? originStation.first['city']
+              : (originStation['city'] ?? originStation['City']))
           : null,
-      toCity: trip != null && trip['station_to'] != null
-          ? (trip['station_to'] is List
-              ? trip['station_to'].first['city']
-              : (trip['station_to']['city'] ?? trip['station_to']['City']))
+      toCity: destinationStation != null
+          ? (destinationStation is List
+              ? destinationStation.first['city']
+              : (destinationStation['city'] ?? destinationStation['City']))
           : null,
       date: trip != null ? (trip['Date'] ?? trip['date'])?.toString() : null,
       time: trip != null ? (trip['Time'] ?? trip['time'])?.toString() : null,

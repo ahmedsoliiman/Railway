@@ -105,7 +105,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Enter your email address and we\'ll send you a code to reset your password',
+                  'Enter your email address and we\'ll send you a code to reset your password.\n(For testing, you can use any email and code 123456)',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: AppTheme.grayColor,

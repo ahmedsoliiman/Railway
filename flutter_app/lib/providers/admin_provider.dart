@@ -291,6 +291,43 @@ class AdminProvider with ChangeNotifier {
     return response;
   }
 
+  Future<Map<String, dynamic>> updateTrip({
+    required int id,
+    required int trainId,
+    required String from,
+    required String to,
+    required DateTime date,
+    required String time,
+    required double basePrice,
+  }) async {
+    final response = await _adminService.updateTrip(
+      id: id,
+      trainId: trainId,
+      from: from,
+      to: to,
+      date: date,
+      time: time,
+      basePrice: basePrice,
+    );
+
+    if (response['success']) {
+      await loadTrips();
+    }
+
+    return response;
+  }
+
+  Future<Map<String, dynamic>> deleteTrip(int id) async {
+    final response = await _adminService.deleteTrip(id);
+
+    if (response['success']) {
+      _trips.removeWhere((t) => t.id == id);
+      notifyListeners();
+    }
+
+    return response;
+  }
+
   // ============ TRIP DEPARTURES ============
 
   Future<void> loadTripDepartures({bool force = false}) async {

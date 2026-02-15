@@ -62,21 +62,21 @@ class AdminService {
     double? longitude,
   }) async {
     try {
-      final response = await _supabase
-          .from('station')
-          .insert({
-            'name': name,
-            'code': code,
-            'city': city,
-            'address': address ?? '',
-          })
-          .select()
-          .single();
+      final response = await _supabase.from('station').insert({
+        'name': name,
+        'code': code,
+        'city': city,
+        'address': address ?? '',
+      }).select();
+
+      final data = response.isNotEmpty
+          ? Map<String, dynamic>.from(response.first)
+          : <String, dynamic>{};
 
       return {
         'success': true,
         'message': 'Station created successfully',
-        'data': Station.fromJson(response),
+        'data': Station.fromJson(data),
       };
     } catch (e) {
       return {'success': false, 'message': 'Error: ${e.toString()}'};
@@ -100,13 +100,16 @@ class AdminService {
             if (address != null) 'address': address,
           })
           .eq('code', code)
-          .select()
-          .single();
+          .select();
+
+      final data = response.isNotEmpty
+          ? Map<String, dynamic>.from(response.first)
+          : <String, dynamic>{};
 
       return {
         'success': true,
         'message': 'Station updated successfully',
-        'data': Station.fromJson(response),
+        'data': Station.fromJson(data),
       };
     } catch (e) {
       return {'success': false, 'message': 'Error: ${e.toString()}'};
@@ -140,17 +143,17 @@ class AdminService {
     int? capacity,
   }) async {
     try {
-      final response = await _supabase
-          .from('train')
-          .insert({
-            'Train_Name': trainNumber,
-            'Train_Type': type,
-            'Status': 'Active',
-          })
-          .select()
-          .single();
+      final response = await _supabase.from('train').insert({
+        'Train_Name': trainNumber,
+        'Train_Type': type,
+        'Status': 'Active',
+      }).select();
 
-      return {'success': true, 'data': Train.fromJson(response)};
+      final data = response.isNotEmpty
+          ? Map<String, dynamic>.from(response.first)
+          : <String, dynamic>{};
+
+      return {'success': true, 'data': Train.fromJson(data)};
     } catch (e) {
       return {'success': false, 'message': 'Error: ${e.toString()}'};
     }
@@ -169,10 +172,13 @@ class AdminService {
             if (type != null) 'Train_Type': type,
           })
           .eq('Train_ID', id)
-          .select()
-          .single();
+          .select();
 
-      return {'success': true, 'data': Train.fromJson(response)};
+      final data = response.isNotEmpty
+          ? Map<String, dynamic>.from(response.first)
+          : <String, dynamic>{};
+
+      return {'success': true, 'data': Train.fromJson(data)};
     } catch (e) {
       return {'success': false, 'message': 'Error: ${e.toString()}'};
     }
@@ -250,24 +256,70 @@ class AdminService {
     required int quantities,
   }) async {
     try {
-      final response = await _supabase
-          .from('trip')
-          .insert({
-            'Train_ID': trainId,
-            'From': originStationId.toString(),
-            'To': destinationStationId.toString(),
-            'Date': departure.toIso8601String().split('T')[0],
-            'Time': departureTime.toIso8601String().split('T')[1].split('.')[0],
-            'Base_Price': economicPrice,
-          })
-          .select()
-          .single();
+      final response = await _supabase.from('trip').insert({
+        'Train_ID': trainId,
+        'From': originStationId.toString(),
+        'To': destinationStationId.toString(),
+        'Date': departure.toIso8601String().split('T')[0],
+        'Time': departureTime.toIso8601String().split('T')[1].split('.')[0],
+        'Base_Price': economicPrice,
+      }).select();
+
+      final data = response.isNotEmpty
+          ? Map<String, dynamic>.from(response.first)
+          : <String, dynamic>{};
 
       return {
         'success': true,
         'message': 'Trip created successfully',
-        'data': Trip.fromJson(response),
+        'data': Trip.fromJson(data),
       };
+    } catch (e) {
+      return {'success': false, 'message': 'Error: ${e.toString()}'};
+    }
+  }
+
+  Future<Map<String, dynamic>> updateTrip({
+    required int id,
+    required int trainId,
+    required String from,
+    required String to,
+    required DateTime date,
+    required String time,
+    required double basePrice,
+  }) async {
+    try {
+      final response = await _supabase
+          .from('trip')
+          .update({
+            'Train_ID': trainId,
+            'From': from,
+            'To': to,
+            'Date': date.toIso8601String().split('T')[0],
+            'Time': time,
+            'Base_Price': basePrice,
+          })
+          .eq('Trip_ID', id)
+          .select();
+
+      final data = response.isNotEmpty
+          ? Map<String, dynamic>.from(response.first)
+          : <String, dynamic>{};
+
+      return {
+        'success': true,
+        'message': 'Trip updated successfully',
+        'data': Trip.fromJson(data),
+      };
+    } catch (e) {
+      return {'success': false, 'message': 'Error: ${e.toString()}'};
+    }
+  }
+
+  Future<Map<String, dynamic>> deleteTrip(int id) async {
+    try {
+      await _supabase.from('trip').delete().eq('Trip_ID', id);
+      return {'success': true, 'message': 'Trip deleted successfully'};
     } catch (e) {
       return {'success': false, 'message': 'Error: ${e.toString()}'};
     }
@@ -292,21 +344,21 @@ class AdminService {
     required int availableSeats,
   }) async {
     try {
-      final response = await _supabase
-          .from('trip_departures')
-          .insert({
-            'trip_id': tripId,
-            'departure_time': departureTime.toIso8601String(),
-            'arrival_time': arrivalTime.toIso8601String(),
-            'available_seats': availableSeats,
-          })
-          .select()
-          .single();
+      final response = await _supabase.from('trip_departures').insert({
+        'trip_id': tripId,
+        'departure_time': departureTime.toIso8601String(),
+        'arrival_time': arrivalTime.toIso8601String(),
+        'available_seats': availableSeats,
+      }).select();
+
+      final data = response.isNotEmpty
+          ? Map<String, dynamic>.from(response.first)
+          : <String, dynamic>{};
 
       return {
         'success': true,
         'message': 'Trip Departure created successfully',
-        'data': response,
+        'data': data,
       };
     } catch (e) {
       return {'success': false, 'message': 'Error: ${e.toString()}'};
@@ -330,13 +382,16 @@ class AdminService {
             'available_seats': availableSeats,
           })
           .eq('id', id)
-          .select()
-          .single();
+          .select();
+
+      final data = response.isNotEmpty
+          ? Map<String, dynamic>.from(response.first)
+          : <String, dynamic>{};
 
       return {
         'success': true,
         'message': 'Trip Departure updated successfully',
-        'data': response,
+        'data': data,
       };
     } catch (e) {
       return {'success': false, 'message': 'Error: ${e.toString()}'};
@@ -373,20 +428,20 @@ class AdminService {
     required double price,
   }) async {
     try {
-      final response = await _supabase
-          .from('carriage_type')
-          .insert({
-            'type': type,
-            'capacity': capacity,
-            'price': price,
-          })
-          .select()
-          .single();
+      final response = await _supabase.from('carriage_type').insert({
+        'type': type,
+        'capacity': capacity,
+        'price': price,
+      }).select();
+
+      final data = response.isNotEmpty
+          ? Map<String, dynamic>.from(response.first)
+          : <String, dynamic>{};
 
       return {
         'success': true,
         'message': 'Carriage Type created successfully',
-        'data': response,
+        'data': data,
       };
     } catch (e) {
       return {'success': false, 'message': 'Error: ${e.toString()}'};
@@ -408,13 +463,16 @@ class AdminService {
             'price': price,
           })
           .eq('carriage_type_ID', id)
-          .select()
-          .single();
+          .select();
+
+      final data = response.isNotEmpty
+          ? Map<String, dynamic>.from(response.first)
+          : <String, dynamic>{};
 
       return {
         'success': true,
         'message': 'Carriage Type updated successfully',
-        'data': response,
+        'data': data,
       };
     } catch (e) {
       return {'success': false, 'message': 'Error: ${e.toString()}'};

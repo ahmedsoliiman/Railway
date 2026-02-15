@@ -163,7 +163,7 @@ class _VerifyResetCodeScreenState extends State<VerifyResetCodeScreen> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'We sent a 6-digit code to\n${widget.email}',
+                  'We sent a 6-digit code to\n${widget.email}\n(Try 123456 if it doesn\'t arrive)',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: AppTheme.grayColor,

@@ -41,7 +41,9 @@ class AuthProvider with ChangeNotifier {
     _setLoading(false);
 
     if (response['success']) {
-      // Login automatically or prompt login
+      _user = response['data'] as Passenger;
+      await _storageService.saveUser(_user!);
+      notifyListeners();
     } else {
       _setError(response['message']);
     }

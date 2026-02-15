@@ -22,20 +22,33 @@ class Carriage {
   String get classType => carriageType?.type ?? 'third class';
   String get classTypeDisplay => carriageType?.typeDisplay ?? 'Third Class';
   int get seatsCount => carriageType?.capacity ?? 80;
-  String get description => '${classTypeDisplay} carriage with $seatsCount seats';
+  String get description =>
+      '${classTypeDisplay} carriage with $seatsCount seats';
 
   factory Carriage.fromJson(Map<String, dynamic> json) {
     return Carriage(
       id: json['id'] ?? 0,
-      name: json['carriageNumber'] ?? json['carriage_number'] ?? json['name'] ?? '',
+      name: json['carriageNumber'] ??
+          json['carriage_number'] ??
+          json['name'] ??
+          '',
       carriageTypeId: json['carriageTypeId'] ?? json['carriage_type_id'] ?? 0,
       model: json['model'],
-      carriageType: json['carriageType'] != null ? CarriageType.fromJson(json['carriageType']) :
-                    (json['carriage_type'] != null ? CarriageType.fromJson(json['carriage_type']) : null),
-      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : 
-                 (json['created_at'] != null ? DateTime.parse(json['created_at']) : null),
-      updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) :
-                 (json['updated_at'] != null ? DateTime.parse(json['updated_at']) : null),
+      carriageType: json['carriageType'] != null
+          ? CarriageType.fromJson(json['carriageType'])
+          : (json['carriage_type'] != null
+              ? CarriageType.fromJson(json['carriage_type'])
+              : null),
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'])
+          : (json['created_at'] != null
+              ? DateTime.parse(json['created_at'])
+              : null),
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'])
+          : (json['updated_at'] != null
+              ? DateTime.parse(json['updated_at'])
+              : null),
     );
   }
 
@@ -81,7 +94,10 @@ class CarriageType {
 
   factory CarriageType.fromJson(Map<String, dynamic> json) {
     return CarriageType(
-      id: json['id'] ?? json['carriage_type_id'] ?? 0,
+      id: json['id'] ??
+          json['carriage_type_id'] ??
+          json['carriage_type_ID'] ??
+          0,
       type: json['type'] ?? 'third class',
       capacity: json['capacity'] ?? 80,
       price: (json['price'] ?? 100.0).toDouble(),

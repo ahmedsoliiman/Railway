@@ -117,6 +117,26 @@ class _PaymentScreenState extends State<PaymentScreen> {
   Future<void> _processPayment() async {
     if (!_formKey.currentState!.validate()) return;
 
+    // 🔒 MOCK PAYMENT VALIDATION - Only accept test cards
+    final cardDigits = _cardNumberController.text.replaceAll(' ', '');
+    const allowedCards = [
+      '4242424242424242', // Visa Test Card
+      '5555555555554444', // Mastercard Test Card
+    ];
+
+    if (!allowedCards.contains(cardDigits)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('❌ Card Declined! Please use a valid test card:\n'
+              '• Visa: 4242 4242 4242 4242\n'
+              '• Mastercard: 5555 5555 5555 4444'),
+          backgroundColor: AppTheme.dangerColor,
+          duration: Duration(seconds: 5),
+        ),
+      );
+      return;
+    }
+
     setState(() => _isProcessing = true);
 
     // Use booking data from widget arguments
@@ -351,7 +371,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       InkWell(
                         onTap: () {
                           setState(() {
-                            _cardNumberController.text = "5555 5555 5555 5555";
+                            _cardNumberController.text = "5555 5555 5555 4444";
                             _cardholderNameController.text = "Mohamed Reda";
                             _expiryDateController.text = "11/27";
                             _cvvController.text = "456";
