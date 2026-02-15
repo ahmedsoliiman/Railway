@@ -45,8 +45,7 @@ class _SignupScreenState extends State<SignupScreen> {
     if (response['success'] == true) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-              'Signup successful! Please check your email for verification code.'),
+          content: Text('Signup successful! Check email or use code 123456.'),
           backgroundColor: AppTheme.successColor,
         ),
       );

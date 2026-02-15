@@ -407,7 +407,7 @@ class AdminService {
             'capacity': capacity,
             'price': price,
           })
-          .eq('carriage_type_id', id)
+          .eq('carriage_type_ID', id)
           .select()
           .single();
 
@@ -423,7 +423,7 @@ class AdminService {
 
   Future<Map<String, dynamic>> deleteCarriageType(int id) async {
     try {
-      await _supabase.from('carriage_type').delete().eq('carriage_type_id', id);
+      await _supabase.from('carriage_type').delete().eq('carriage_type_ID', id);
       return {'success': true, 'message': 'Carriage Type deleted successfully'};
     } catch (e) {
       return {'success': false, 'message': 'Error: ${e.toString()}'};
